@@ -21,6 +21,8 @@ class HotkeyListener : Form {
     [DllImport("user32.dll")] static extern bool UnhookWindowsHookEx(IntPtr hook);
     [DllImport("user32.dll")] static extern IntPtr CallNextHookEx(IntPtr hook, int code, IntPtr wParam, IntPtr lParam);
     [DllImport("user32.dll")] static extern short GetAsyncKeyState(int virtualKey);
+    [DllImport("user32.dll")] static extern bool ShowWindow(IntPtr window, int command);
+    [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr window);
     [DllImport("kernel32.dll")] static extern IntPtr GetModuleHandle(string moduleName);
 
     delegate IntPtr LowLevelKeyboardProc(int code, IntPtr wParam, IntPtr lParam);
@@ -39,6 +41,7 @@ class HotkeyListener : Form {
     const int WM_KEYUP = 0x0101;
     const int WM_SYSKEYDOWN = 0x0104;
     const int WM_SYSKEYUP = 0x0105;
+    const int SW_RESTORE = 9;
 
     const uint MOD_ALT = 0x0001;
     const uint MOD_CONTROL = 0x0002;
@@ -121,6 +124,34 @@ class HotkeyListener : Form {
                 UseShellExecute = true
             });
         } catch { }
+
+        int attempts = 0;
+        var focusTimer = new Timer { Interval = 250 };
+        focusTimer.Tick += (sender, args) => {
+            attempts++;
+            if (FocusFiles() || attempts == 12) {
+                focusTimer.Stop();
+                focusTimer.Dispose();
+            }
+        };
+        focusTimer.Start();
+    }
+
+    bool FocusFiles() {
+        foreach (Process process in Process.GetProcessesByName("Files")) {
+            try {
+                process.Refresh();
+                if (process.MainWindowHandle != IntPtr.Zero) {
+                    ShowWindow(process.MainWindowHandle, SW_RESTORE);
+                    SetForegroundWindow(process.MainWindowHandle);
+                    return true;
+                }
+            } catch { }
+            finally {
+                process.Dispose();
+            }
+        }
+        return false;
     }
 
     IntPtr KeyboardHookCallback(int code, IntPtr wParam, IntPtr lParam) {

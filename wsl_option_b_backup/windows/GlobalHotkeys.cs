@@ -10,6 +10,7 @@ using System.Windows.Forms;
 //   Ctrl+Alt+Up/Down    -> volume up/down
 //   Ctrl+Shift+M        -> mute toggle
 //   Win+E              -> open Files
+//   Win alone / Win+Space -> intentionally ignored
 // Windows handles Alt+Tab and Alt+Space normally now that explorer.exe is
 // the shell again. Ctrl+V in Pi is supplied by Windows Terminal.
 class HotkeyListener : Form {
@@ -19,7 +20,6 @@ class HotkeyListener : Form {
     [DllImport("user32.dll", SetLastError = true)] static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc callback, IntPtr moduleHandle, uint threadId);
     [DllImport("user32.dll")] static extern bool UnhookWindowsHookEx(IntPtr hook);
     [DllImport("user32.dll")] static extern IntPtr CallNextHookEx(IntPtr hook, int code, IntPtr wParam, IntPtr lParam);
-    [DllImport("user32.dll")] static extern void keybd_event(byte virtualKey, byte scanCode, uint flags, UIntPtr extraInfo);
     [DllImport("kernel32.dll")] static extern IntPtr GetModuleHandle(string moduleName);
 
     delegate IntPtr LowLevelKeyboardProc(int code, IntPtr wParam, IntPtr lParam);
@@ -38,14 +38,12 @@ class HotkeyListener : Form {
     const int WM_KEYUP = 0x0101;
     const int WM_SYSKEYDOWN = 0x0104;
     const int WM_SYSKEYUP = 0x0105;
-    const uint KEYEVENTF_KEYUP = 0x0002;
 
     const uint MOD_ALT = 0x0001;
     const uint MOD_CONTROL = 0x0002;
     const uint MOD_SHIFT = 0x0004;
     const byte VK_LWIN = 0x5B;
     const byte VK_RWIN = 0x5C;
-    const byte VK_MENU = 0x12;
     const byte VK_SPACE = 0x20;
     const uint VK_UP = 0x26;
     const uint VK_DOWN = 0x28;
@@ -66,6 +64,7 @@ class HotkeyListener : Form {
     bool winKeyDown;
     bool winComboUsed;
     bool suppressE;
+    bool suppressSpace;
 
     public HotkeyListener() {
         this.ShowInTaskbar = false;
@@ -124,15 +123,6 @@ class HotkeyListener : Form {
         } catch { }
     }
 
-    void LaunchPowerToysRun() {
-        try {
-            keybd_event(VK_MENU, 0, 0, UIntPtr.Zero);
-            keybd_event(VK_SPACE, 0, 0, UIntPtr.Zero);
-            keybd_event(VK_SPACE, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
-            keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
-        } catch { }
-    }
-
     IntPtr KeyboardHookCallback(int code, IntPtr wParam, IntPtr lParam) {
         if (code >= 0) {
             int message = wParam.ToInt32();
@@ -152,16 +142,20 @@ class HotkeyListener : Form {
                     }
                     return (IntPtr)1;
                 }
+                if (data.vkCode == VK_SPACE) {
+                    suppressSpace = true;
+                    return (IntPtr)1;
+                }
             } else if (keyUp && data.vkCode == VK_E && suppressE) {
                 suppressE = false;
+                return (IntPtr)1;
+            } else if (keyUp && data.vkCode == VK_SPACE && suppressSpace) {
+                suppressSpace = false;
                 return (IntPtr)1;
             } else if (keyUp && (data.vkCode == VK_LWIN || data.vkCode == VK_RWIN)) {
                 bool bareWin = winKeyDown && !winComboUsed;
                 winKeyDown = false;
-                if (bareWin) {
-                    try { BeginInvoke((MethodInvoker)LaunchPowerToysRun); } catch { }
-                    return (IntPtr)1;
-                }
+                if (bareWin) return (IntPtr)1;
             }
         }
 

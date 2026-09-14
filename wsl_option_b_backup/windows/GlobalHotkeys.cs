@@ -9,50 +9,19 @@ using System.Windows.Forms;
 //   Shift+S            -> the normal Windows Snipping Tool region selector
 //   Ctrl+Alt+Up/Down    -> volume up/down
 //   Ctrl+Shift+M        -> mute toggle
-//   Win+E              -> open Files
-//   Win alone           -> intentionally ignored
 // Windows handles Alt+Tab and Alt+Space normally now that explorer.exe is
 // the shell again. Ctrl+V in Pi is supplied by Windows Terminal.
 class HotkeyListener : Form {
     [DllImport("user32.dll")] static extern bool SetProcessDPIAware();
     [DllImport("user32.dll")] static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
     [DllImport("user32.dll")] static extern bool UnregisterHotKey(IntPtr hWnd, int id);
-    [DllImport("user32.dll", SetLastError = true)] static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc callback, IntPtr moduleHandle, uint threadId);
-    [DllImport("user32.dll")] static extern bool UnhookWindowsHookEx(IntPtr hook);
-    [DllImport("user32.dll")] static extern IntPtr CallNextHookEx(IntPtr hook, int code, IntPtr wParam, IntPtr lParam);
-    [DllImport("user32.dll")] static extern short GetAsyncKeyState(int virtualKey);
-    [DllImport("user32.dll")] static extern bool ShowWindow(IntPtr window, int command);
-    [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr window);
-    [DllImport("kernel32.dll")] static extern IntPtr GetModuleHandle(string moduleName);
-
-    delegate IntPtr LowLevelKeyboardProc(int code, IntPtr wParam, IntPtr lParam);
-
-    [StructLayout(LayoutKind.Sequential)]
-    struct KeyboardHookData {
-        public uint vkCode;
-        public uint scanCode;
-        public uint flags;
-        public uint time;
-        public IntPtr extraInfo;
-    }
-
-    const int WH_KEYBOARD_LL = 13;
-    const int WM_KEYDOWN = 0x0100;
-    const int WM_KEYUP = 0x0101;
-    const int WM_SYSKEYDOWN = 0x0104;
-    const int WM_SYSKEYUP = 0x0105;
-    const int SW_RESTORE = 9;
-
     const uint MOD_ALT = 0x0001;
     const uint MOD_CONTROL = 0x0002;
     const uint MOD_SHIFT = 0x0004;
-    const byte VK_LWIN = 0x5B;
-    const byte VK_RWIN = 0x5C;
     const uint VK_UP = 0x26;
     const uint VK_DOWN = 0x28;
     const uint VK_S = 0x53;
     const uint VK_M = 0x4D;
-    const uint VK_E = 0x45;
     const int WM_HOTKEY = 0x0312;
 
     const int ID_SCREENSHOT = 1;
@@ -61,13 +30,6 @@ class HotkeyListener : Form {
     const int ID_MUTE = 4;
 
     const string AUDIO_EXE = @"C:\Users\Admin\AppData\Local\AudioCtl.exe";
-
-    LowLevelKeyboardProc keyboardHookProc;
-    IntPtr keyboardHook;
-    bool winKeyDown;
-    bool winComboUsed;
-    bool suppressWinKeyUp;
-    bool suppressE;
 
     public HotkeyListener() {
         this.ShowInTaskbar = false;
@@ -84,8 +46,6 @@ class HotkeyListener : Form {
         RegisterHotKey(this.Handle, ID_VOL_UP, MOD_CONTROL | MOD_ALT, VK_UP);
         RegisterHotKey(this.Handle, ID_VOL_DOWN, MOD_CONTROL | MOD_ALT, VK_DOWN);
         RegisterHotKey(this.Handle, ID_MUTE, MOD_CONTROL | MOD_SHIFT, VK_M);
-        keyboardHookProc = KeyboardHookCallback;
-        keyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, keyboardHookProc, GetModuleHandle(null), 0);
     }
 
     protected override void WndProc(ref Message m) {
@@ -116,88 +76,11 @@ class HotkeyListener : Form {
         } catch { }
     }
 
-    void LaunchFiles() {
-        try {
-            Process.Start(new ProcessStartInfo {
-                FileName = "explorer.exe",
-                Arguments = @"shell:AppsFolder\Files_1y0xx7n9077q4!App",
-                UseShellExecute = true
-            });
-        } catch { }
-
-        int attempts = 0;
-        var focusTimer = new Timer { Interval = 250 };
-        focusTimer.Tick += (sender, args) => {
-            attempts++;
-            if (FocusFiles() || attempts == 12) {
-                focusTimer.Stop();
-                focusTimer.Dispose();
-            }
-        };
-        focusTimer.Start();
-    }
-
-    bool FocusFiles() {
-        foreach (Process process in Process.GetProcessesByName("Files")) {
-            try {
-                process.Refresh();
-                if (process.MainWindowHandle != IntPtr.Zero) {
-                    ShowWindow(process.MainWindowHandle, SW_RESTORE);
-                    SetForegroundWindow(process.MainWindowHandle);
-                    return true;
-                }
-            } catch { }
-            finally {
-                process.Dispose();
-            }
-        }
-        return false;
-    }
-
-    IntPtr KeyboardHookCallback(int code, IntPtr wParam, IntPtr lParam) {
-        if (code >= 0) {
-            int message = wParam.ToInt32();
-            KeyboardHookData data = (KeyboardHookData)Marshal.PtrToStructure(lParam, typeof(KeyboardHookData));
-            bool keyDown = message == WM_KEYDOWN || message == WM_SYSKEYDOWN;
-            bool keyUp = message == WM_KEYUP || message == WM_SYSKEYUP;
-            bool winHeld = winKeyDown || GetAsyncKeyState(VK_LWIN) < 0 || GetAsyncKeyState(VK_RWIN) < 0;
-
-            if (keyDown && (data.vkCode == VK_LWIN || data.vkCode == VK_RWIN)) {
-                if (!winKeyDown) {
-                    winComboUsed = false;
-                    suppressWinKeyUp = false;
-                }
-                winKeyDown = true;
-            } else if (keyDown && winHeld) {
-                winComboUsed = true;
-                if (data.vkCode == VK_E) {
-                    suppressWinKeyUp = true;
-                    if (!suppressE) {
-                        suppressE = true;
-                        try { BeginInvoke((MethodInvoker)LaunchFiles); } catch { }
-                    }
-                    return (IntPtr)1;
-                }
-            } else if (keyUp && data.vkCode == VK_E && suppressE) {
-                suppressE = false;
-                return (IntPtr)1;
-            } else if (keyUp && (data.vkCode == VK_LWIN || data.vkCode == VK_RWIN)) {
-                bool suppressWin = suppressWinKeyUp || (winKeyDown && !winComboUsed);
-                winKeyDown = false;
-                suppressWinKeyUp = false;
-                if (suppressWin) return (IntPtr)1;
-            }
-        }
-
-        return CallNextHookEx(keyboardHook, code, wParam, lParam);
-    }
-
     protected override void Dispose(bool disposing) {
         UnregisterHotKey(this.Handle, ID_SCREENSHOT);
         UnregisterHotKey(this.Handle, ID_VOL_UP);
         UnregisterHotKey(this.Handle, ID_VOL_DOWN);
         UnregisterHotKey(this.Handle, ID_MUTE);
-        if (keyboardHook != IntPtr.Zero) UnhookWindowsHookEx(keyboardHook);
         base.Dispose(disposing);
     }
 

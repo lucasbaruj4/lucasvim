@@ -7,7 +7,7 @@
             "command": 
             {
                 "action": "sendInput",
-                "input": "\u0016"
+                "input": "\u001bv"
             },
             "id": "User.sendInput.7A0A6397"
         }

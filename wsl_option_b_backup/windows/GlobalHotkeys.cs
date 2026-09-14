@@ -63,6 +63,7 @@ class HotkeyListener : Form {
     IntPtr keyboardHook;
     bool winKeyDown;
     bool winComboUsed;
+    bool suppressWinKeyUp;
     bool suppressE;
     bool suppressSpace;
 
@@ -131,11 +132,15 @@ class HotkeyListener : Form {
             bool keyUp = message == WM_KEYUP || message == WM_SYSKEYUP;
 
             if (keyDown && (data.vkCode == VK_LWIN || data.vkCode == VK_RWIN)) {
-                if (!winKeyDown) winComboUsed = false;
+                if (!winKeyDown) {
+                    winComboUsed = false;
+                    suppressWinKeyUp = false;
+                }
                 winKeyDown = true;
             } else if (keyDown && winKeyDown) {
                 winComboUsed = true;
                 if (data.vkCode == VK_E) {
+                    suppressWinKeyUp = true;
                     if (!suppressE) {
                         suppressE = true;
                         try { BeginInvoke((MethodInvoker)LaunchFiles); } catch { }
@@ -143,6 +148,7 @@ class HotkeyListener : Form {
                     return (IntPtr)1;
                 }
                 if (data.vkCode == VK_SPACE) {
+                    suppressWinKeyUp = true;
                     suppressSpace = true;
                     return (IntPtr)1;
                 }
@@ -153,9 +159,10 @@ class HotkeyListener : Form {
                 suppressSpace = false;
                 return (IntPtr)1;
             } else if (keyUp && (data.vkCode == VK_LWIN || data.vkCode == VK_RWIN)) {
-                bool bareWin = winKeyDown && !winComboUsed;
+                bool suppressWin = suppressWinKeyUp || (winKeyDown && !winComboUsed);
                 winKeyDown = false;
-                if (bareWin) return (IntPtr)1;
+                suppressWinKeyUp = false;
+                if (suppressWin) return (IntPtr)1;
             }
         }
 

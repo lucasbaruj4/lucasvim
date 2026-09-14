@@ -59,10 +59,18 @@ background = "#7aa2f7"
 key = "F11"
 action = "ToggleFullscreen"
 
+# Normal clipboard paste for the shell and other terminal programs.
 [[keyboard.bindings]]
 key = "V"
 mods = "Control|Shift"
-chars = "\u001b[118;6u" # Send Ctrl+Shift+V to Pi's clipboard-image handler
+action = "Paste"
+
+# Pi's image-clipboard handler keeps its own shortcut so it does not interfere
+# with normal text paste in the shell.
+[[keyboard.bindings]]
+key = "V"
+mods = "Control|Alt"
+chars = "\u001b[118;6u"
 
 [[keyboard.bindings]]
 key = "C"

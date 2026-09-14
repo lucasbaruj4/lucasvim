@@ -20,6 +20,7 @@ class HotkeyListener : Form {
     [DllImport("user32.dll", SetLastError = true)] static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc callback, IntPtr moduleHandle, uint threadId);
     [DllImport("user32.dll")] static extern bool UnhookWindowsHookEx(IntPtr hook);
     [DllImport("user32.dll")] static extern IntPtr CallNextHookEx(IntPtr hook, int code, IntPtr wParam, IntPtr lParam);
+    [DllImport("user32.dll")] static extern short GetAsyncKeyState(int virtualKey);
     [DllImport("kernel32.dll")] static extern IntPtr GetModuleHandle(string moduleName);
 
     delegate IntPtr LowLevelKeyboardProc(int code, IntPtr wParam, IntPtr lParam);
@@ -130,6 +131,7 @@ class HotkeyListener : Form {
             KeyboardHookData data = (KeyboardHookData)Marshal.PtrToStructure(lParam, typeof(KeyboardHookData));
             bool keyDown = message == WM_KEYDOWN || message == WM_SYSKEYDOWN;
             bool keyUp = message == WM_KEYUP || message == WM_SYSKEYUP;
+            bool winHeld = winKeyDown || GetAsyncKeyState(VK_LWIN) < 0 || GetAsyncKeyState(VK_RWIN) < 0;
 
             if (keyDown && (data.vkCode == VK_LWIN || data.vkCode == VK_RWIN)) {
                 if (!winKeyDown) {
@@ -137,7 +139,7 @@ class HotkeyListener : Form {
                     suppressWinKeyUp = false;
                 }
                 winKeyDown = true;
-            } else if (keyDown && winKeyDown) {
+            } else if (keyDown && winHeld) {
                 winComboUsed = true;
                 if (data.vkCode == VK_E) {
                     suppressWinKeyUp = true;

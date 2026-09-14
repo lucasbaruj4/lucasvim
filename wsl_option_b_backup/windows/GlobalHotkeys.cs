@@ -10,7 +10,7 @@ using System.Windows.Forms;
 //   Ctrl+Alt+Up/Down    -> volume up/down
 //   Ctrl+Shift+M        -> mute toggle
 //   Win+E              -> open Files
-//   Win alone / Win+Space -> intentionally ignored
+//   Win alone           -> intentionally ignored
 // Windows handles Alt+Tab and Alt+Space normally now that explorer.exe is
 // the shell again. Ctrl+V in Pi is supplied by Windows Terminal.
 class HotkeyListener : Form {
@@ -45,7 +45,6 @@ class HotkeyListener : Form {
     const uint MOD_SHIFT = 0x0004;
     const byte VK_LWIN = 0x5B;
     const byte VK_RWIN = 0x5C;
-    const byte VK_SPACE = 0x20;
     const uint VK_UP = 0x26;
     const uint VK_DOWN = 0x28;
     const uint VK_S = 0x53;
@@ -66,7 +65,6 @@ class HotkeyListener : Form {
     bool winComboUsed;
     bool suppressWinKeyUp;
     bool suppressE;
-    bool suppressSpace;
 
     public HotkeyListener() {
         this.ShowInTaskbar = false;
@@ -149,16 +147,8 @@ class HotkeyListener : Form {
                     }
                     return (IntPtr)1;
                 }
-                if (data.vkCode == VK_SPACE) {
-                    suppressWinKeyUp = true;
-                    suppressSpace = true;
-                    return (IntPtr)1;
-                }
             } else if (keyUp && data.vkCode == VK_E && suppressE) {
                 suppressE = false;
-                return (IntPtr)1;
-            } else if (keyUp && data.vkCode == VK_SPACE && suppressSpace) {
-                suppressSpace = false;
                 return (IntPtr)1;
             } else if (keyUp && (data.vkCode == VK_LWIN || data.vkCode == VK_RWIN)) {
                 bool suppressWin = suppressWinKeyUp || (winKeyDown && !winComboUsed);

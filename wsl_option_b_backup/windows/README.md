@@ -14,8 +14,9 @@ by hand.
 | --- | --- |
 | `alacritty-shell.vbs` | Legacy no-Explorer login shell; retained as a rollback reference and not started automatically. |
 | `alacritty.toml` | Alacritty config; spawns `wsl.exe -d Ubuntu`. |
-| `GlobalHotkeys.cs` | Useful system-wide hotkeys: Shift+S opens the normal Windows Snipping Tool, Ctrl+Alt+Up/Down changes volume, and Ctrl+Shift+M toggles mute. Windows handles Alt+Tab and Alt+Space normally. |
+| `GlobalHotkeys.cs` | Useful system-wide hotkeys: Shift+S opens the normal Windows Snipping Tool, Ctrl+Alt+Up/Down changes volume, Ctrl+Shift+M toggles mute, Win+E opens Files, and bare Win is ignored. Windows handles Alt+Tab and Alt+Space normally. |
 | `global-hotkeys-launch.vbs` | Starts `GlobalHotkeys.exe` from the normal Windows Startup folder. |
+| `powertoys-keyboard-manager-default.json` | PowerToys Keyboard Manager mapping; disables Win+Space without leaving modifier keys stuck. Live copy: `%LOCALAPPDATA%\Microsoft\PowerToys\Keyboard Manager\default.json`. |
 | `AudioCtl.cs` | COM audio-endpoint helper the volume hotkeys call. |
 | `wallpaper-window.ps1` | Legacy wallpaper workaround for the no-Explorer setup; not started automatically. |
 | `clock-overlay.ps1` | Legacy always-on-top corner clock; not started automatically. |

@@ -11,7 +11,7 @@ EXE='/mnt/c/Users/Admin/AppData/Local/AudioCtl.exe'
 
 # Get live values from Windows (precompiled exe -- avoids ~600ms of
 # powershell.exe + Add-Type C# recompilation on every status refresh)
-raw=$("$EXE" status 2>/dev/null | tr -d '\r')
+raw=$("$EXE" status </dev/null 2>/dev/null | tr -d '\r')
 
 pct=$(echo "$raw" | grep -oP 'volume=\K[0-9.]+')
 mute=$(echo "$raw" | grep -oP 'muted=\K\w+' | tr '[:upper:]' '[:lower:]')

@@ -7,7 +7,7 @@ EXE='/mnt/c/Users/Admin/AppData/Local/BatteryCtl.exe'
 
 # Single query for percent + BatteryStatus (precompiled exe -- avoids
 # powershell.exe startup cost on every status refresh)
-data=$("$EXE" 2>/dev/null | tr -d '\r')
+data=$("$EXE" </dev/null 2>/dev/null | tr -d '\r')
 
 pct=$(echo "$data" | awk '{print $1}')
 st=$(echo "$data" | awk '{print $2}')

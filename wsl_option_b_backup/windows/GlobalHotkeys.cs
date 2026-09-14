@@ -19,6 +19,7 @@ class HotkeyListener : Form {
     [DllImport("user32.dll", SetLastError = true)] static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc callback, IntPtr moduleHandle, uint threadId);
     [DllImport("user32.dll")] static extern bool UnhookWindowsHookEx(IntPtr hook);
     [DllImport("user32.dll")] static extern IntPtr CallNextHookEx(IntPtr hook, int code, IntPtr wParam, IntPtr lParam);
+    [DllImport("user32.dll")] static extern void keybd_event(byte virtualKey, byte scanCode, uint flags, UIntPtr extraInfo);
     [DllImport("kernel32.dll")] static extern IntPtr GetModuleHandle(string moduleName);
 
     delegate IntPtr LowLevelKeyboardProc(int code, IntPtr wParam, IntPtr lParam);
@@ -37,12 +38,15 @@ class HotkeyListener : Form {
     const int WM_KEYUP = 0x0101;
     const int WM_SYSKEYDOWN = 0x0104;
     const int WM_SYSKEYUP = 0x0105;
+    const uint KEYEVENTF_KEYUP = 0x0002;
 
     const uint MOD_ALT = 0x0001;
     const uint MOD_CONTROL = 0x0002;
     const uint MOD_SHIFT = 0x0004;
-    const uint VK_LWIN = 0x5B;
-    const uint VK_RWIN = 0x5C;
+    const byte VK_LWIN = 0x5B;
+    const byte VK_RWIN = 0x5C;
+    const byte VK_MENU = 0x12;
+    const byte VK_SPACE = 0x20;
     const uint VK_UP = 0x26;
     const uint VK_DOWN = 0x28;
     const uint VK_S = 0x53;
@@ -60,6 +64,7 @@ class HotkeyListener : Form {
     LowLevelKeyboardProc keyboardHookProc;
     IntPtr keyboardHook;
     bool winKeyDown;
+    bool winComboUsed;
     bool suppressE;
 
     public HotkeyListener() {
@@ -119,6 +124,15 @@ class HotkeyListener : Form {
         } catch { }
     }
 
+    void LaunchPowerToysRun() {
+        try {
+            keybd_event(VK_MENU, 0, 0, UIntPtr.Zero);
+            keybd_event(VK_SPACE, 0, 0, UIntPtr.Zero);
+            keybd_event(VK_SPACE, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+            keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+        } catch { }
+    }
+
     IntPtr KeyboardHookCallback(int code, IntPtr wParam, IntPtr lParam) {
         if (code >= 0) {
             int message = wParam.ToInt32();
@@ -127,16 +141,27 @@ class HotkeyListener : Form {
             bool keyUp = message == WM_KEYUP || message == WM_SYSKEYUP;
 
             if (keyDown && (data.vkCode == VK_LWIN || data.vkCode == VK_RWIN)) {
+                if (!winKeyDown) winComboUsed = false;
                 winKeyDown = true;
-            } else if (keyDown && data.vkCode == VK_E && winKeyDown) {
-                suppressE = true;
-                try { BeginInvoke((MethodInvoker)LaunchFiles); } catch { }
-                return (IntPtr)1;
+            } else if (keyDown && winKeyDown) {
+                winComboUsed = true;
+                if (data.vkCode == VK_E) {
+                    if (!suppressE) {
+                        suppressE = true;
+                        try { BeginInvoke((MethodInvoker)LaunchFiles); } catch { }
+                    }
+                    return (IntPtr)1;
+                }
             } else if (keyUp && data.vkCode == VK_E && suppressE) {
                 suppressE = false;
                 return (IntPtr)1;
             } else if (keyUp && (data.vkCode == VK_LWIN || data.vkCode == VK_RWIN)) {
+                bool bareWin = winKeyDown && !winComboUsed;
                 winKeyDown = false;
+                if (bareWin) {
+                    try { BeginInvoke((MethodInvoker)LaunchPowerToysRun); } catch { }
+                    return (IntPtr)1;
+                }
             }
         }
 

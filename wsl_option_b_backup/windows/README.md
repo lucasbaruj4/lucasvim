@@ -20,7 +20,7 @@ by hand.
 | `wallpaper-window.ps1` | Legacy wallpaper workaround for the no-Explorer setup; not started automatically. |
 | `clock-overlay.ps1` | Legacy always-on-top corner clock; not started automatically. |
 | `clipboard-watcher.ps1` | Legacy manual clipboard-to-WSL converter; not started automatically, so Windows clipboard images remain available to Pi. |
-| `windows-terminal-settings.json` | Windows Terminal settings: Ubuntu default, PowerShell profile retained, Ctrl+V is normal clipboard paste, Ctrl+Shift+V remains an alias, and Alt+V reaches Pi's image-paste binding. |
+| `windows-terminal-settings.json` | Windows Terminal settings: Ubuntu default, PowerShell profile retained, Ctrl+V is normal clipboard paste, Ctrl+Shift+V remains an alias, Alt+V reaches Pi's image-paste binding, and native selections copy automatically. |
 
 ## Building the .cs files
 

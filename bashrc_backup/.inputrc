@@ -1,0 +1,14 @@
+$include /etc/inputrc
+
+# Case-insensitive tab completion for commands/filenames (e.g. "gitc<TAB>"
+# matches "GitConfig" just as well as "gitconfig").
+set completion-ignore-case on
+
+# Treat "-" and "_" as equivalent when completing too, since it's the same
+# kind of case-insensitive convenience (e.g. "my-file<TAB>" also matches
+# "my_file").
+set completion-map-case on
+
+# Show all matches immediately on ambiguous completion instead of requiring
+# a second <TAB> press.
+set show-all-if-ambiguous on

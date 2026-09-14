@@ -22,7 +22,7 @@ atomic_write() {
 ) &
 
 (
-  info=$("$NETSH" wlan show interfaces 2>/dev/null | tr -d '\r')
+  info=$("$NETSH" wlan show interfaces </dev/null 2>/dev/null | tr -d '\r')
   ssid=$(echo "$info" | awk -F': ' '/^ *SSID/ && !/BSSID/ {print $2; exit}')
   sig=$(echo "$info"  | awk -F': ' '/^ *Signal/ {print $2; exit}')
   if [ -n "$ssid" ]; then

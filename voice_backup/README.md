@@ -8,14 +8,13 @@ Manually-synced copies of the live files in `~/.claude/voice/`.
 
 | Key | Does |
 |---|---|
-| `Alt+V` | Start recording; press again to transcribe and type the text into the pane |
+| `Alt+V` | Disabled; dictation is no longer bound to a hotkey |
 | `Alt+S` | Stop speech and clear the queue; press again while silent to mute/unmute |
 | `Alt+R` | Replay the last output spoken for the current tmux window |
 
-Dictation **sends the message immediately** — attach screenshots before
-dictating, not after. Change the voice with `voice.sh set <name>`; `voice.sh
-demo` plays every installed voice. Voices live in `~/.claude/voice/voices/`
-and are not in git.
+Dictation remains available only as a manual script if needed. Change the voice
+with `voice.sh set <name>`; `voice.sh demo` plays every installed voice. Voices
+live in `~/.claude/voice/voices/` and are not in git.
 
 Bindings live in `../tmux_backup/.tmux.conf`. Both use `run-shell -b` — without
 `-b` the whole tmux server freezes for the length of the transcription.
@@ -24,7 +23,7 @@ Bindings live in `../tmux_backup/.tmux.conf`. Both use `run-shell -b` — withou
 
 | File | Role |
 |---|---|
-| `dictate.sh` | `Alt+V` toggle: record → transcribe → type |
+| `dictate.sh` | Manual record → transcribe → type script; no hotkey |
 | `transcribe.py` | One-shot Whisper call; holds the vocabulary prompt |
 | `speak.sh` | Cleans stdin and queues it; does not play anything itself |
 | `player.sh` | Drains the queue, one item at a time, across all sessions |

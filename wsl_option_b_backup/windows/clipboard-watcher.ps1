@@ -1,9 +1,8 @@
 # clipboard-watcher.ps1
-# Watches the Windows clipboard. The instant a new image shows up on it
-# (Win+Shift+S, PrtSc, Snipping Tool, etc.), it runs `paste-screenshot`
-# inside WSL, which saves the image into ~/Pictures/screenshots and puts
-# the resulting WSL path back on the clipboard as text — ready for
-# Ctrl+Shift+V in the terminal. No manual command needed anymore.
+# Legacy optional clipboard converter. It is not started automatically:
+# Windows clipboard images must remain intact so Pi can read them directly
+# when Ctrl+V is pressed. Run this only when a saved WSL path is specifically
+# needed instead of normal image paste.
 
 Add-Type -AssemblyName System.Windows.Forms
 

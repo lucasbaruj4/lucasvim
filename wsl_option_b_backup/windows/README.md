@@ -1,8 +1,8 @@
 # Windows-side helpers
 
 Backup copies of the Windows files used by the WSL-centric setup. Windows now
-uses the normal `explorer.exe` shell; Alacritty opens WSL as a regular terminal.
-Live location for the Windows-side programs and scripts is
+uses the normal `explorer.exe` shell and Windows Terminal opens WSL by default.
+Alacritty is retained as a rollback option. Live location for the Windows-side programs and scripts is
 `C:\Users\Admin\AppData\Local\` (except `alacritty.toml`, which lives in
 `C:\Users\Admin\AppData\Roaming\alacritty\`, and the `*-launch.vbs` files,
 which live in the user's Startup folder).
@@ -14,12 +14,13 @@ by hand.
 | --- | --- |
 | `alacritty-shell.vbs` | Legacy no-Explorer login shell; retained as a rollback reference and not started automatically. |
 | `alacritty.toml` | Alacritty config; spawns `wsl.exe -d Ubuntu`. |
-| `GlobalHotkeys.cs` | Useful system-wide hotkeys: Shift+S screenshot, Ctrl+Alt+Up/Down volume, and Ctrl+Shift+M mute. Windows handles Alt+Tab and Alt+Space normally. |
+| `GlobalHotkeys.cs` | Useful system-wide hotkeys: Shift+S opens the normal Windows Snipping Tool, Ctrl+Alt+Up/Down changes volume, and Ctrl+Shift+M toggles mute. Windows handles Alt+Tab and Alt+Space normally. |
 | `global-hotkeys-launch.vbs` | Starts `GlobalHotkeys.exe` from the normal Windows Startup folder. |
 | `AudioCtl.cs` | COM audio-endpoint helper the volume hotkeys call. |
 | `wallpaper-window.ps1` | Legacy wallpaper workaround for the no-Explorer setup; not started automatically. |
 | `clock-overlay.ps1` | Legacy always-on-top corner clock; not started automatically. |
-| `clipboard-watcher.ps1` | Writes clipboard screenshots out to a file. |
+| `clipboard-watcher.ps1` | Legacy manual clipboard-to-WSL converter; not started automatically, so Windows clipboard images remain available to Pi. |
+| `windows-terminal-settings.json` | Windows Terminal settings: Ubuntu default, PowerShell profile retained, Ctrl+V sends Pi's image-paste byte, and Ctrl+Shift+V remains normal text paste. |
 
 ## Building the .cs files
 

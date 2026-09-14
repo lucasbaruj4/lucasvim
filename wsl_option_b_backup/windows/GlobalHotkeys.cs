@@ -1,17 +1,16 @@
 using System;
 using System.Diagnostics;
 using System.Drawing;
-using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 // Persistent background listener: registers useful system-wide hotkeys
 // (work no matter which app has focus):
-//   Shift+S            -> snip-style region-select screenshot
+//   Shift+S            -> the normal Windows Snipping Tool region selector
 //   Ctrl+Alt+Up/Down    -> volume up/down
 //   Ctrl+Shift+M        -> mute toggle
 // Windows handles Alt+Tab and Alt+Space normally now that explorer.exe is
-// the shell again.
+// the shell again. Ctrl+V in Pi is supplied by Windows Terminal.
 class HotkeyListener : Form {
     [DllImport("user32.dll")] static extern bool SetProcessDPIAware();
     [DllImport("user32.dll")] static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
@@ -53,7 +52,7 @@ class HotkeyListener : Form {
     protected override void WndProc(ref Message m) {
         if (m.Msg == WM_HOTKEY) {
             switch (m.WParam.ToInt32()) {
-                case ID_SCREENSHOT: TakeSnip(); break;
+                case ID_SCREENSHOT: LaunchWindowsSnip(); break;
                 case ID_VOL_UP: RunAudioCtl("up"); break;
                 case ID_VOL_DOWN: RunAudioCtl("down"); break;
                 case ID_MUTE: RunAudioCtl("toggle"); break;
@@ -69,17 +68,13 @@ class HotkeyListener : Form {
         Process.Start(psi);
     }
 
-    void TakeSnip() {
-        Rectangle bounds = Screen.PrimaryScreen.Bounds;
-        Bitmap full = new Bitmap(bounds.Width, bounds.Height, PixelFormat.Format32bppArgb);
-        using (Graphics g = Graphics.FromImage(full)) {
-            g.CopyFromScreen(bounds.Location, Point.Empty, bounds.Size);
-        }
-
-        using (var overlay = new SnipOverlay(full, bounds)) {
-            overlay.ShowDialog();
-        }
-        full.Dispose();
+    void LaunchWindowsSnip() {
+        try {
+            Process.Start(new ProcessStartInfo {
+                FileName = "ms-screenclip:",
+                UseShellExecute = true
+            });
+        } catch { }
     }
 
     protected override void Dispose(bool disposing) {
@@ -95,87 +90,5 @@ class HotkeyListener : Form {
         SetProcessDPIAware();
         Application.EnableVisualStyles();
         Application.Run(new HotkeyListener());
-    }
-}
-
-class SnipOverlay : Form {
-    Bitmap fullImage;
-    Point start;
-    Rectangle selection;
-    bool selecting = false;
-
-    public SnipOverlay(Bitmap full, Rectangle bounds) {
-        fullImage = full;
-        this.FormBorderStyle = FormBorderStyle.None;
-        this.Bounds = bounds;
-        this.StartPosition = FormStartPosition.Manual;
-        this.TopMost = true;
-        this.Cursor = Cursors.Cross;
-        this.DoubleBuffered = true;
-        this.KeyPreview = true;
-        this.BackgroundImage = full;
-        this.BackgroundImageLayout = ImageLayout.None;
-        this.ShowInTaskbar = false;
-    }
-
-    protected override void OnShown(EventArgs e) {
-        base.OnShown(e);
-        this.Activate();
-        this.Focus();
-    }
-
-    protected override void OnMouseDown(MouseEventArgs e) {
-        selecting = true;
-        start = e.Location;
-        selection = new Rectangle(start, Size.Empty);
-        Invalidate();
-    }
-
-    protected override void OnMouseMove(MouseEventArgs e) {
-        if (selecting) {
-            int x = Math.Min(start.X, e.X);
-            int y = Math.Min(start.Y, e.Y);
-            int w = Math.Abs(e.X - start.X);
-            int h = Math.Abs(e.Y - start.Y);
-            selection = new Rectangle(x, y, w, h);
-            Invalidate();
-        }
-    }
-
-    protected override void OnMouseUp(MouseEventArgs e) {
-        selecting = false;
-        if (selection.Width > 2 && selection.Height > 2) {
-            CopySelectionToClipboard();
-        }
-        this.Close();
-    }
-
-    protected override void OnKeyDown(KeyEventArgs e) {
-        if (e.KeyCode == Keys.Escape) {
-            this.Close();
-        }
-    }
-
-    protected override void OnPaint(PaintEventArgs e) {
-        base.OnPaint(e);
-        using (var dim = new SolidBrush(Color.FromArgb(120, 0, 0, 0))) {
-            using (Region r = new Region(this.ClientRectangle)) {
-                if (selection.Width > 0 && selection.Height > 0) {
-                    r.Exclude(selection);
-                }
-                e.Graphics.FillRegion(dim, r);
-            }
-        }
-        if (selection.Width > 0 && selection.Height > 0) {
-            using (var pen = new Pen(Color.DeepSkyBlue, 2)) {
-                e.Graphics.DrawRectangle(pen, selection);
-            }
-        }
-    }
-
-    void CopySelectionToClipboard() {
-        using (Bitmap cropped = fullImage.Clone(selection, fullImage.PixelFormat)) {
-            Clipboard.SetImage(cropped);
-        }
     }
 }

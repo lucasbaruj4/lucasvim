@@ -1,0 +1,4 @@
+#!/bin/sh
+# Pi's WSL clipboard fallback calls powershell.exe by name while Windows
+# interop is intentionally absent from PATH. Keep this narrow wrapper local.
+exec /mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe "$@" < /dev/null

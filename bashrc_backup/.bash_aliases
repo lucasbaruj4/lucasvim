@@ -7,10 +7,8 @@ alias ros='docker run -it --rm -e DISPLAY=:0.0 -v /tmp/.X11-unix:/tmp/.X11-unix 
 alias bri='~/.local/bin/brightness-tui'
 
 # --- camera: open webcam viewer from WSL ---
-# The real Windows Camera app is a UWP/MSIX package. Its activation now
-# takes ~45s (fixed COM timeout) because there's no shell broker running
-# (no explorer.exe). Route around it entirely: a local webcam page opened
-# in Brave (plain Win32 app, launches instantly here).
+# Keep the local webcam page as a predictable WSL-to-Windows helper instead
+# of depending on the Windows Camera app's package activation path.
 camera() {
   _brave --app="file:///C:/Users/Admin/AppData/Local/camera.html"
 }
@@ -173,8 +171,6 @@ claudex() {
   CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1 \
   claude "$@"
 }
-
-alias kill-exporer='/mnt/c/Windows/System32/taskkill.exe /F /IM explorer.exe 2>&1 < /dev/null'
 
 # Mirror of the /clock-on skill: clean restart of the Nothing-style pill,
 # then bounce its z-order so it lands above Brave instead of behind it.

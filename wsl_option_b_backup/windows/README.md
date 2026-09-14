@@ -1,21 +1,24 @@
-# Windows-side helpers (Plan B)
+# Windows-side helpers
 
-Backup copies of the Windows files behind the no-explorer.exe setup, where
-Alacritty replaces `explorer.exe` as the login shell. Live location for all of
-them is `C:\Users\Admin\AppData\Local\` (except `alacritty.toml`, which lives
-in `C:\Users\Admin\AppData\Roaming\alacritty\`).
+Backup copies of the Windows files used by the WSL-centric setup. Windows now
+uses the normal `explorer.exe` shell; Alacritty opens WSL as a regular terminal.
+Live location for the Windows-side programs and scripts is
+`C:\Users\Admin\AppData\Local\` (except `alacritty.toml`, which lives in
+`C:\Users\Admin\AppData\Roaming\alacritty\`, and the `*-launch.vbs` files,
+which live in the user's Startup folder).
 
 These are copies, not symlinks — after editing a live file, copy it back here
 by hand.
 
 | File | What it does |
 | --- | --- |
-| `alacritty-shell.vbs` | The login shell itself. Starts the clipboard watcher and hotkey listener, then runs Alacritty in the foreground and blocks. Closing Alacritty logs you out. |
+| `alacritty-shell.vbs` | Legacy no-Explorer login shell; retained as a rollback reference and not started automatically. |
 | `alacritty.toml` | Alacritty config; spawns `wsl.exe -d Ubuntu`. |
-| `GlobalHotkeys.cs` | System-wide hotkeys: Shift+S screenshot, Ctrl+Alt+Up/Down volume, Ctrl+Shift+M mute, Alt+1 Alacritty, Alt+2 Brave. Also blocks Alt+Tab and Alt+Space. |
+| `GlobalHotkeys.cs` | Useful system-wide hotkeys: Shift+S screenshot, Ctrl+Alt+Up/Down volume, and Ctrl+Shift+M mute. Windows handles Alt+Tab and Alt+Space normally. |
+| `global-hotkeys-launch.vbs` | Starts `GlobalHotkeys.exe` from the normal Windows Startup folder. |
 | `AudioCtl.cs` | COM audio-endpoint helper the volume hotkeys call. |
-| `wallpaper-window.ps1` | Optional borderless fullscreen wallpaper; not started automatically. Pins itself to the bottom of the z-order. |
-| `clock-overlay.ps1` | Always-on-top corner clock, hides over fullscreen windows. |
+| `wallpaper-window.ps1` | Legacy wallpaper workaround for the no-Explorer setup; not started automatically. |
+| `clock-overlay.ps1` | Legacy always-on-top corner clock; not started automatically. |
 | `clipboard-watcher.ps1` | Writes clipboard screenshots out to a file. |
 
 ## Building the .cs files

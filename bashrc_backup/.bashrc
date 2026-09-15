@@ -125,7 +125,7 @@ export NVM_DIR="$HOME/.nvm"
 alias clear='printf "\033c"'
 alias ls="lsd"
 
-export LS_COLORS="di=01;38;2;0;255;102"
+export LS_COLORS="di=01;38;2;154;189;245"
 . "$HOME/.cargo/env"
 
 

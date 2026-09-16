@@ -129,15 +129,7 @@ export LS_COLORS="di=01;38;2;154;189;245"
 . "$HOME/.cargo/env"
 
 
-export TMUX_TMPDIR=/tmp
-
-# Always start from home, then tmux (but only for the outer login shell --
-# panes spawned inside an existing tmux session should keep their own cwd)
-if [[ $- == *i* ]] && command -v tmux >/dev/null 2>&1 \
-   && [ -z "$TMUX" ] && [ -z "$VSCODE_INJECTION" ]; then
-  cd ~
-  exec tmux new-session -A -s main
-fi
+# tmux is not part of the current shell workflow; do not auto-start it here.
 
 # brave as default browser
 export BROWSER=wslview
@@ -192,17 +184,7 @@ pastescreenshot() {
 # (sshot is the function above. Type "sshot" or use F2+s in tmux)
 
 
-# poll hardware status for tmux -- singleton across ALL shells/panes via
-# flock, not just this shell. A per-shell env var guard (the old approach)
-# doesn't work in tmux: each pane starts an independent shell, so every
-# pane ended up running its own copy of this loop, and the PowerShell
-# calls they all made concurrently slowed each other down via contention.
-mkdir -p "$HOME/.cache/tmux-hw"
-(
-  flock -n 9 || exit 0
-  while true; do ~/.local/bin/tmux-hw-status.sh; sleep 0.1; done
-) 9>"$HOME/.cache/tmux-hw/poller.lock" &
-disown
+# tmux is not part of the current shell workflow; do not start its hardware poller here.
 
 # >>> grok installer >>>
 export PATH="$HOME/.grok/bin:$PATH"

@@ -114,7 +114,7 @@ require("lazy").setup({
       }
     end,
     keys = {
-      { "<leader>gd", "<cmd>DiffviewOpen HEAD --untracked-files=all<cr>", desc = "Review changes since HEAD" },
+      { "<leader>gd", "<cmd>DiffviewOpen --untracked-files=all<cr>", desc = "Review all working-tree changes" },
       { "<leader>gq", "<cmd>DiffviewClose<cr>", desc = "Close Git review" },
     },
   },

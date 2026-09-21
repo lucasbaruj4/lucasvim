@@ -6,6 +6,15 @@ alias ros='docker run -it --rm -e DISPLAY=:0.0 -v /tmp/.X11-unix:/tmp/.X11-unix 
 # --- bri: interactive brightness TUI ---
 alias bri='~/.local/bin/brightness-tui'
 
+# --- nvim gd: review working-tree changes against HEAD ---
+nvim() {
+  if [ "$#" -eq 1 ] && [ "$1" = "gd" ]; then
+    command nvim -c 'DiffviewOpen HEAD --untracked-files=all'
+  else
+    command nvim "$@"
+  fi
+}
+
 # --- camera: open webcam viewer from WSL ---
 # Keep the local webcam page as a predictable WSL-to-Windows helper instead
 # of depending on the Windows Camera app's package activation path.

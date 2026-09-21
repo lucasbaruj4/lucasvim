@@ -87,6 +87,40 @@ require("lazy").setup({
 		  yazi_floating_window_winblend = 0,
 	  },
   },
+  {
+    "sindrets/diffview.nvim",
+    dependencies = {
+      "nvim-lua/plenary.nvim",
+      "nvim-tree/nvim-web-devicons",
+    },
+    opts = function()
+      local actions = require("diffview.actions")
+
+      return {
+        view = {
+          default = { winbar_info = false },
+        },
+        keymaps = {
+          view = {
+            ["<cr>"] = actions.goto_file_edit,
+            ["<leader>q"] = "<cmd>DiffviewFocusFiles<cr>",
+          },
+          file_panel = {
+            ["<cr>"] = actions.focus_entry,
+            ["<leader>q"] = "<cmd>DiffviewClose<cr>",
+          },
+        },
+      }
+    end,
+    keys = {
+      { "<leader>gd", "<cmd>DiffviewOpen HEAD --untracked-files=all<cr>", desc = "Review changes since HEAD" },
+      { "<leader>gq", "<cmd>DiffviewClose<cr>", desc = "Close Git review" },
+    },
+  },
+  {
+    "lewis6991/gitsigns.nvim",
+    opts = {},
+  },
 })
 
 require("nvim-treesitter.configs").setup({

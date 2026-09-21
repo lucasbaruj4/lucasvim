@@ -89,6 +89,7 @@ require("lazy").setup({
   },
   {
     "sindrets/diffview.nvim",
+    cmd = { "DiffviewOpen", "DiffviewClose", "DiffviewFocusFiles" },
     dependencies = {
       "nvim-lua/plenary.nvim",
       "nvim-tree/nvim-web-devicons",

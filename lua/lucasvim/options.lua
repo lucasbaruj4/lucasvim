@@ -136,6 +136,7 @@ local function render_markdown_with_glow()
 end
 
 vim.api.nvim_create_user_command("Glow", render_markdown_with_glow, {})
+vim.cmd("cnoreabbrev <expr> glow getcmdtype() ==# ':' && getcmdline() ==# 'glow' ? 'Glow' : 'glow'")
 vim.keymap.set("n", "<leader>mg", "<cmd>Glow<cr>", { desc = "Render Markdown with Glow" })
 
 -- Show all diagnostics for the current line in a floating window

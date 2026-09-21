@@ -1,0 +1,4 @@
+[mgr]
+prepend_keymap = [
+  { on = ["g", "w"], run = ["cd ~", "cd ~/windows"], desc = "Jump straight to the Windows C: drive" },
+]

@@ -129,7 +129,11 @@ export LS_COLORS="di=01;38;2;154;189;245"
 . "$HOME/.cargo/env"
 
 
-# tmux is not part of the current shell workflow; do not auto-start it here.
+# Windows Terminal: attach to the persistent tmux workspace, creating it on first use.
+# TMUX prevents nesting; WT_SESSION limits this to Windows Terminal's Ubuntu profile.
+if [ -z "${TMUX:-}" ] && [ -n "${WT_SESSION:-}" ]; then
+  exec tmux new-session -A -s main
+fi
 
 # brave as default browser
 export BROWSER=wslview

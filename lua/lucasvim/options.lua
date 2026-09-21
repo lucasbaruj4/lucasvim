@@ -100,7 +100,12 @@ local function render_markdown_with_glow()
     return
   end
 
-  vim.cmd("update")
+  local preview_path = string.format(
+    "%s/nvim-glow-preview-%d.md",
+    vim.fn.expand("~"),
+    vim.uv.hrtime()
+  )
+  vim.fn.writefile(vim.api.nvim_buf_get_lines(buffer, 0, -1, false), preview_path)
 
   local preview_buffer = vim.api.nvim_create_buf(false, true)
   local width = math.floor(vim.o.columns * 0.9)
@@ -115,13 +120,14 @@ local function render_markdown_with_glow()
     border = "rounded",
   })
 
-  vim.fn.termopen({ "glow", path })
+  vim.fn.termopen({ "glow", "--pager", preview_path })
   vim.cmd("startinsert")
 
   vim.api.nvim_create_autocmd("TermClose", {
     buffer = preview_buffer,
     once = true,
     callback = function()
+      vim.fn.delete(preview_path)
       if vim.api.nvim_win_is_valid(preview_window) then
         vim.api.nvim_win_close(preview_window, true)
       end

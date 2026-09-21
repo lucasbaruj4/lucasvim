@@ -91,6 +91,47 @@ vim.g.loaded_netrwPlugin = 1
 -- keymaps for yazi
 vim.keymap.set("n", "<leader>e", "<cmd>Yazi<cr>")
 
+local function render_markdown_with_glow()
+  local buffer = vim.api.nvim_get_current_buf()
+  local path = vim.api.nvim_buf_get_name(buffer)
+
+  if vim.bo[buffer].filetype ~= "markdown" or path == "" then
+    vim.notify("Glow only renders saved Markdown files", vim.log.levels.WARN)
+    return
+  end
+
+  vim.cmd("update")
+
+  local preview_buffer = vim.api.nvim_create_buf(false, true)
+  local width = math.floor(vim.o.columns * 0.9)
+  local height = math.floor(vim.o.lines * 0.9)
+  local preview_window = vim.api.nvim_open_win(preview_buffer, true, {
+    relative = "editor",
+    width = width,
+    height = height,
+    col = math.floor((vim.o.columns - width) / 2),
+    row = math.floor((vim.o.lines - height) / 2),
+    style = "minimal",
+    border = "rounded",
+  })
+
+  vim.fn.termopen({ "glow", path })
+  vim.cmd("startinsert")
+
+  vim.api.nvim_create_autocmd("TermClose", {
+    buffer = preview_buffer,
+    once = true,
+    callback = function()
+      if vim.api.nvim_win_is_valid(preview_window) then
+        vim.api.nvim_win_close(preview_window, true)
+      end
+    end,
+  })
+end
+
+vim.api.nvim_create_user_command("Glow", render_markdown_with_glow, {})
+vim.keymap.set("n", "<leader>mg", "<cmd>Glow<cr>", { desc = "Render Markdown with Glow" })
+
 -- Show all diagnostics for the current line in a floating window
 vim.keymap.set("n", "<leader>cd", function()
   vim.diagnostic.open_float(0, { scope = "line" })

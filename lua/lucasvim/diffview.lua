@@ -3,6 +3,12 @@ local M = {}
 local picker_namespace = vim.api.nvim_create_namespace("lucasvim_diffview_commit_picker")
 local pending_label
 
+local function set_picker_highlights()
+  vim.api.nvim_set_hl(0, "LucasvimDiffviewHead", { fg = "#00d9ff", bold = true })
+  vim.api.nvim_set_hl(0, "LucasvimDiffviewCommit", { fg = "#ffb86c", bold = true })
+  vim.api.nvim_set_hl(0, "LucasvimDiffviewSeparator", { fg = "#6b7280" })
+end
+
 local function git(root, args)
   return vim.fn.systemlist(vim.list_extend({ "git", "-C", root }, args))
 end
@@ -80,32 +86,43 @@ function M.pick_commit()
     table.insert(choices, { hash = hash, subject = subject })
   end
 
-  local buffer = vim.api.nvim_create_buf(false, true)
-  local function format_choice(id, subject)
-    return id .. "  │  " .. subject
+  local width = math.min(math.max(55, vim.o.columns - 12), 100)
+  local id_width = 7
+  local separator = "  │  "
+  local max_subject_width = width - id_width - vim.fn.strdisplaywidth(separator)
+
+  local function truncate_subject(subject)
+    if vim.fn.strdisplaywidth(subject) <= max_subject_width then return subject end
+    return vim.fn.strcharpart(subject, 0, max_subject_width - 1) .. "…"
   end
 
+  local function format_choice(id, subject)
+    return string.format("%-" .. id_width .. "s", id) .. separator .. truncate_subject(subject)
+  end
+
+  local buffer = vim.api.nvim_create_buf(false, true)
   local display = { "Choose comparison commit", "", format_choice("HEAD", choices[1].subject) }
   for index = 2, #choices do
     table.insert(display, format_choice(choices[index].hash, choices[index].subject))
   end
   vim.api.nvim_buf_set_lines(buffer, 0, -1, false, display)
 
+  set_picker_highlights()
   for index, choice in ipairs(choices) do
     local row = index + 1
     local id = index == 1 and "HEAD" or choice.hash
-    local separator_start = #id + 2
+    local separator_start = id_width + 2
 
     vim.api.nvim_buf_add_highlight(buffer, picker_namespace,
-      index == 1 and "DiffviewFilePanelTitle" or "DiffviewStatusModified", row, 0, #id)
-    vim.api.nvim_buf_add_highlight(buffer, picker_namespace, "Comment", row,
+      index == 1 and "LucasvimDiffviewHead" or "LucasvimDiffviewCommit", row, 0, #id)
+    vim.api.nvim_buf_add_highlight(buffer, picker_namespace, "LucasvimDiffviewSeparator", row,
       separator_start, separator_start + #"│")
   end
 
   vim.bo[buffer].modifiable = false
   vim.bo[buffer].bufhidden = "wipe"
 
-  local width = math.min(math.max(55, vim.o.columns - 12), 100)
+
   local height = math.min(#display, math.max(8, vim.o.lines - 8))
   local window = vim.api.nvim_open_win(buffer, true, {
     relative = "editor",
@@ -119,6 +136,7 @@ function M.pick_commit()
     title_pos = "center",
   })
 
+  vim.wo[window].wrap = false
   vim.api.nvim_win_set_cursor(window, { 3, 0 })
 
   local function close()

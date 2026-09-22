@@ -1,5 +1,6 @@
 local M = {}
 
+local picker_namespace = vim.api.nvim_create_namespace("lucasvim_diffview_commit_picker")
 local pending_label
 
 local function git(root, args)
@@ -80,11 +81,27 @@ function M.pick_commit()
   end
 
   local buffer = vim.api.nvim_create_buf(false, true)
-  local display = { "Choose comparison commit", "", "HEAD  " .. choices[1].subject }
+  local function format_choice(id, subject)
+    return id .. "  │  " .. subject
+  end
+
+  local display = { "Choose comparison commit", "", format_choice("HEAD", choices[1].subject) }
   for index = 2, #choices do
-    table.insert(display, choices[index].hash .. "  " .. choices[index].subject)
+    table.insert(display, format_choice(choices[index].hash, choices[index].subject))
   end
   vim.api.nvim_buf_set_lines(buffer, 0, -1, false, display)
+
+  for index, choice in ipairs(choices) do
+    local row = index + 1
+    local id = index == 1 and "HEAD" or choice.hash
+    local separator_start = #id + 2
+
+    vim.api.nvim_buf_add_highlight(buffer, picker_namespace,
+      index == 1 and "DiffviewFilePanelTitle" or "DiffviewStatusModified", row, 0, #id)
+    vim.api.nvim_buf_add_highlight(buffer, picker_namespace, "Comment", row,
+      separator_start, separator_start + #"│")
+  end
+
   vim.bo[buffer].modifiable = false
   vim.bo[buffer].bufhidden = "wipe"
 

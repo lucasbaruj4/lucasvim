@@ -96,10 +96,14 @@ require("lazy").setup({
     },
     opts = function()
       local actions = require("diffview.actions")
+      local review = require("lucasvim.diffview")
 
       return {
         view = {
           default = { winbar_info = false },
+        },
+        hooks = {
+          view_opened = review.attach,
         },
         keymaps = {
           view = {
@@ -107,6 +111,7 @@ require("lazy").setup({
             ["<leader>q"] = "<cmd>DiffviewFocusFiles<cr>",
           },
           file_panel = {
+            ["C"] = review.pick_commit,
             ["<cr>"] = actions.focus_entry,
             ["<leader>q"] = "<cmd>DiffviewClose<cr>",
           },

@@ -1,0 +1,8 @@
+[Unit]
+Description=Back up lucasvim configuration to GitHub
+After=network-online.target
+
+[Service]
+Type=oneshot
+TimeoutStartSec=2min
+ExecStart=%h/.local/bin/sync-lucasvim.sh

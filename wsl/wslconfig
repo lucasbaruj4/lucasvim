@@ -1,0 +1,9 @@
+[wsl2]
+memory=8GB
+processors=6
+swap=2GB
+networkingMode=mirrored
+
+[experimental]
+autoMemoryReclaim=dropCache
+sparseVhd=true

@@ -1,0 +1,24 @@
+{
+  "name": "t3-toggle",
+  "displayName": "Lucas T3 Toggle",
+  "description": "Switch between one persistent T3 browser tab and file editors.",
+  "version": "1.1.1",
+  "publisher": "lucas",
+  "engines": { "vscode": "^1.100.0" },
+  "extensionKind": ["ui"],
+  "enabledApiProposals": ["browser"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      { "command": "lucasT3.toggle", "title": "T3: Toggle T3 and Files" },
+      { "command": "lucasT3.files", "title": "T3: Return to Files" },
+      { "command": "lucasT3.nextFile", "title": "T3: Next File Tab" },
+      { "command": "lucasT3.previousFile", "title": "T3: Previous File Tab" },
+      { "command": "lucasT3.explorer", "title": "T3: Toggle Explorer" },
+      { "command": "lucasT3.terminal", "title": "T3: Open Terminal" },
+      { "command": "lucasT3.closeFile", "title": "T3: Close File or Return to Files" },
+      { "command": "lucasT3.projects", "title": "T3: Open Project Folder" }
+    ]
+  }
+}

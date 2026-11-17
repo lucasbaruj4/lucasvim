@@ -1,0 +1,57 @@
+{
+  "Files": {
+    "LeaveAppRunning": false
+  },
+  "PowerToys": {
+    "enabled": {
+      "AdvancedPaste": true,
+      "AlwaysOnTop": true,
+      "Awake": false,
+      "CmdNotFound": false,
+      "CmdPal": false,
+      "ColorPicker": false,
+      "CropAndLock": true,
+      "EnvironmentVariables": false,
+      "FancyZones": true,
+      "File Explorer": false,
+      "File Locksmith": false,
+      "FindMyMouse": false,
+      "Hosts": false,
+      "Image Resizer": false,
+      "Keyboard Manager": true,
+      "LightSwitch": false,
+      "Measure Tool": false,
+      "MouseHighlighter": false,
+      "MouseJump": false,
+      "MousePointerCrosshairs": false,
+      "MouseWithoutBorders": false,
+      "NewPlus": false,
+      "Peek": false,
+      "PowerRename": false,
+      "PowerToys Run": true,
+      "QuickAccent": false,
+      "RegistryPreview": false,
+      "Shortcut Guide": true,
+      "TextExtractor": false,
+      "Workspaces": true,
+      "ZoomIt": false
+    }
+  },
+  "Windows": {
+    "ACPowerMode": "Best performance",
+    "DCPowerMode": "Balanced",
+    "MenuShowDelay": "150"
+  },
+  "Services": {
+    "SmartConnect": "Disabled",
+    "Hamachi2Svc": "Disabled"
+  },
+  "ClaudePolicy": {
+    "secureVmFeaturesEnabled": 0
+  },
+  "RemovedApps": [
+    "Microsoft.YourPhone",
+    "Claude",
+    "MicrosoftWindows.CrossDevice"
+  ]
+}

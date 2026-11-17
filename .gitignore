@@ -5,6 +5,8 @@ debug
 .repro
 foo.*
 *.log
+__pycache__/
+*.py[cod]
 data
 cliproxyapi_backup/config.yaml
 cliproxyapi_backup/.claudex-key

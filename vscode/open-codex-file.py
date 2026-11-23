@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Send a local Codex file link to the VS Code window on Windows."""
 
+import base64
+import json
 import os
 from pathlib import Path
 import subprocess
 import sys
-from urllib.parse import urlencode
 
 
 def main() -> int:
@@ -21,7 +22,8 @@ def main() -> int:
     arguments = {"distro": distro, "path": str(path)}
     if len(sys.argv) == 4:
         arguments.update(line=sys.argv[2], column=sys.argv[3])
-    uri = "vscode://lucas.t3-toggle/open-file?" + urlencode(arguments)
+    payload = base64.urlsafe_b64encode(json.dumps(arguments).encode()).decode().rstrip("=")
+    uri = "vscode://lucas.t3-toggle/open-file?" + payload
     subprocess.Popen(
         [str(code), "--open-url", uri],
         stdin=subprocess.DEVNULL,

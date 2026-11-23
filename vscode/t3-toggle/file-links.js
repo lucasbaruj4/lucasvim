@@ -8,10 +8,9 @@ function sourceNumber(value) {
 
 async function openFileLink(vscode, request) {
   if (request.path !== '/open-file') return;
-  const params = new URLSearchParams(request.query);
-  const distro = params.get('distro');
-  const file = params.get('path');
-  if (!distro || !/^[\w.-]+$/.test(distro) || !file || !posix.isAbsolute(file) || file.startsWith('//') || file.includes('\0')) {
+  const params = JSON.parse(Buffer.from(request.query, 'base64url').toString('utf8'));
+  const { distro, path: file } = params;
+  if (typeof distro !== 'string' || !/^[\w.-]+$/.test(distro) || typeof file !== 'string' || !posix.isAbsolute(file) || file.startsWith('//') || file.includes('\0')) {
     throw new Error('Expected an absolute file path in a WSL distribution.');
   }
 
@@ -20,8 +19,8 @@ async function openFileLink(vscode, request) {
   const workspaceAuthority = workspace.workspaceFolders?.find(folder =>
     folder.uri.authority.toLowerCase() === authority.toLowerCase())?.uri.authority;
   const uri = Uri.from({ scheme: 'vscode-remote', authority: workspaceAuthority || authority, path: posix.normalize(file) });
-  const line = sourceNumber(params.get('line'));
-  const column = sourceNumber(params.get('column')) || 1;
+  const line = sourceNumber(params.line);
+  const column = sourceNumber(params.column) || 1;
 
   if (workspace.getWorkspaceFolder(uri)) {
     const options = { preview: false };

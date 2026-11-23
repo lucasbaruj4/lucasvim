@@ -4,7 +4,7 @@ const { registerFileLinks } = require('./file-links');
 
 function fixture() {
   const calls = [];
-  const files = new Set(['/work/project/src/a & b.js', '/work/project-other/src/test.js', '/work/project/Makefile']);
+  const files = new Set(['/work/project/src/a & b (draft).js', '/work/project-other/src/test.js', '/work/project/Makefile']);
   const uri = path => ({ scheme: 'vscode-remote', authority: 'wsl+Ubuntu', path, with: updates => uri(updates.path) });
   let provider;
   const vscode = {
@@ -27,7 +27,7 @@ function fixture() {
   };
   registerFileLinks(vscode, { subscriptions: [] });
   async function detect(line, cwd = '/work/project') {
-    const terminal = { shellIntegration: { cwd: uri(cwd) }, creationOptions: {} };
+    const terminal = { shellIntegration: { cwd: { scheme: 'file', authority: '', path: cwd } }, creationOptions: {} };
     return provider.provideTerminalLinks({ line, terminal }, { isCancellationRequested: false });
   }
   async function click(line) {
@@ -42,9 +42,9 @@ function fixture() {
 
 test('opens a file in the current workspace at the requested line and column', async () => {
   const { calls, click } = fixture();
-  assert.equal(await click('File (src/a & b.js:12:3)'), 'src/a & b.js:12:3');
+  assert.equal(await click('File (src/a & b (draft).js:12:3)'), 'src/a & b (draft).js:12:3');
   assert.equal(calls[0][0], 'vscode.open');
-  assert.equal(calls[0][1].path, '/work/project/src/a & b.js');
+  assert.equal(calls[0][1].path, '/work/project/src/a & b (draft).js');
   assert.deepEqual(calls[0][2].selection.coordinates, [11, 2, 11, 2]);
 });
 

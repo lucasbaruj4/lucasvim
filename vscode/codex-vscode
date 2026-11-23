@@ -1,3 +1,0 @@
-#!/bin/sh
-export CODEX_FILE_LINK_OPENER="$HOME/.config/nvim/vscode/open-codex-file.py"
-exec "$HOME/.local/lib/codex-vscode/codex" "$@"

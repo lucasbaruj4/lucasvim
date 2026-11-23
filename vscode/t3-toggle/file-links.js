@@ -11,17 +11,23 @@ function isWsl(uri) {
 
 async function provideFileLinks(vscode, { line: text, terminal }, token) {
   const folder = vscode.workspace.workspaceFolders?.find(({ uri }) => isWsl(uri))?.uri;
-  const cwd = [terminal.shellIntegration?.cwd, terminal.creationOptions.cwd].find(isWsl);
+  const shellCwd = terminal.shellIntegration?.cwd;
+  let cwd = [shellCwd, terminal.creationOptions.cwd].find(isWsl);
+  // The Windows extension host receives the WSL shell's working directory as a file URI.
+  if (!cwd && folder && shellCwd?.scheme === 'file' && !shellCwd.authority &&
+      shellCwd.path.startsWith('/') && !/^\/[a-z]:/i.test(shellCwd.path)) {
+    cwd = folder.with({ path: shellCwd.path });
+  }
   const base = cwd ?? folder;
   if (!base || token.isCancellationRequested) return [];
 
   // Codex's inline transcript prints a path directly or after its label in parentheses.
-  const candidates = [...text.matchAll(/\(([^()\n]+)\)|[^\s()[\]<>`"',;]+/gu)];
+  const candidates = [...text.matchAll(/\(((?:[^()\n]|\([^()\n]*\))+)\)|[^\s()[\]<>`"',;]+/gu)];
   const links = await Promise.all(candidates.map(async match => {
     const target = match[1] ?? match[0];
     const location = target.match(/:(\d+)(?::(\d+))?(?:-\d+(?::\d+)?)?$|#L(\d+)(?:C(\d+))?(?:-L\d+(?:C\d+)?)?$/);
     const file = location ? target.slice(0, location.index) : target;
-    if (!file || !/[/\.]/.test(file) && !location && !match[1]) return;
+    if (!file || (!/[/.]/.test(file) && !location && !match[1])) return;
     if (/^(?:[\w+.-]+:|\/\/|~)/.test(file) || /[\u0000-\u001f\u007f]/.test(file)) return;
     if (!posix.isAbsolute(file) && !cwd) return;
 

@@ -25,7 +25,7 @@ def main() -> int:
     payload = base64.urlsafe_b64encode(json.dumps(arguments).encode()).decode().rstrip("=")
     uri = "vscode://lucas.t3-toggle/open-file?" + payload
     subprocess.Popen(
-        [str(code), "--open-url", uri],
+        [str(code), "--open-url", "--", uri],
         stdin=subprocess.DEVNULL,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,

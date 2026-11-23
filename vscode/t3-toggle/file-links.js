@@ -1,27 +1,51 @@
 const { posix } = require('node:path');
 
 function sourceNumber(value) {
-  if (!value || !/^\d+$/.test(value)) return undefined;
   const number = Number(value);
   return Number.isSafeInteger(number) && number > 0 ? number : undefined;
 }
 
-async function openFileLink(vscode, request) {
-  if (request.path !== '/open-file') return;
-  const params = JSON.parse(Buffer.from(request.query, 'base64url').toString('utf8'));
-  const { distro, path: file } = params;
-  if (typeof distro !== 'string' || !/^[\w.-]+$/.test(distro) || typeof file !== 'string' || !posix.isAbsolute(file) || file.startsWith('//') || file.includes('\0')) {
-    throw new Error('Expected an absolute file path in a WSL distribution.');
-  }
+function isWsl(uri) {
+  return uri?.scheme === 'vscode-remote' && uri.authority.toLowerCase().startsWith('wsl+');
+}
 
-  const { Uri, workspace, commands, Range } = vscode;
-  const authority = `wsl+${distro}`;
-  const workspaceAuthority = workspace.workspaceFolders?.find(folder =>
-    folder.uri.authority.toLowerCase() === authority.toLowerCase())?.uri.authority;
-  const uri = Uri.from({ scheme: 'vscode-remote', authority: workspaceAuthority || authority, path: posix.normalize(file) });
-  const line = sourceNumber(params.line);
-  const column = sourceNumber(params.column) || 1;
+async function provideFileLinks(vscode, { line: text, terminal }, token) {
+  const folder = vscode.workspace.workspaceFolders?.find(({ uri }) => isWsl(uri))?.uri;
+  const cwd = [terminal.shellIntegration?.cwd, terminal.creationOptions.cwd].find(isWsl);
+  const base = cwd ?? folder;
+  if (!base || token.isCancellationRequested) return [];
 
+  // Codex's inline transcript prints a path directly or after its label in parentheses.
+  const candidates = [...text.matchAll(/\(([^()\n]+)\)|[^\s()[\]<>`"',;]+/gu)];
+  const links = await Promise.all(candidates.map(async match => {
+    const target = match[1] ?? match[0];
+    const location = target.match(/:(\d+)(?::(\d+))?(?:-\d+(?::\d+)?)?$|#L(\d+)(?:C(\d+))?(?:-L\d+(?:C\d+)?)?$/);
+    const file = location ? target.slice(0, location.index) : target;
+    if (!file || !/[/\.]/.test(file) && !location && !match[1]) return;
+    if (/^(?:[\w+.-]+:|\/\/|~)/.test(file) || /[\u0000-\u001f\u007f]/.test(file)) return;
+    if (!posix.isAbsolute(file) && !cwd) return;
+
+    const uri = base.with({ path: posix.resolve(base.path, file), query: '', fragment: '' });
+    try {
+      const { type } = await vscode.workspace.fs.stat(uri);
+      if (!(type & vscode.FileType.File)) return;
+    } catch {
+      return;
+    }
+    return {
+      startIndex: match.index + (match[1] ? 1 : 0),
+      length: target.length,
+      tooltip: 'Open in VS Code',
+      uri,
+      line: sourceNumber(location?.[1] ?? location?.[3]),
+      column: sourceNumber(location?.[2] ?? location?.[4]) ?? 1
+    };
+  }));
+  return token.isCancellationRequested ? [] : links.filter(Boolean);
+}
+
+async function openFileLink(vscode, { uri, line, column }) {
+  const { workspace, commands, Range } = vscode;
   if (workspace.getWorkspaceFolder(uri)) {
     const options = { preview: false };
     if (line) options.selection = new Range(line - 1, column - 1, line - 1, column - 1);
@@ -39,11 +63,14 @@ async function openFileLink(vscode, request) {
 
 function registerFileLinks(vscode, context) {
   const { window } = vscode;
-  context.subscriptions.push(window.registerUriHandler({
-    handleUri(request) {
-      return openFileLink(vscode, request).catch(error => window.showErrorMessage(`Codex file link: ${error.message}`));
+  context.subscriptions.push(window.registerTerminalLinkProvider({
+    provideTerminalLinks(linkContext, token) {
+      return provideFileLinks(vscode, linkContext, token);
+    },
+    handleTerminalLink(link) {
+      return openFileLink(vscode, link).catch(error => window.showErrorMessage(`Terminal file link: ${error.message}`));
     }
   }));
 }
 
-module.exports = { registerFileLinks, openFileLink };
+module.exports = { registerFileLinks };

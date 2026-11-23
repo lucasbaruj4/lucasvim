@@ -49,7 +49,7 @@
         "lucasT3.terminal",
         "lucasT3.closeFile",
         "workbench.action.openRecent",
-        "lucasT3.projects"
+        "lucasCodex.projects"
     ],
     "workbench.browser.dataStorage": "global",
     "workbench.externalBrowser": "C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe"

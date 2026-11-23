@@ -1,49 +1,74 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const childProcess = require('node:child_process');
 const { registerProjects } = require('./projects');
 
-function fixture(pending, browserUrl) {
-  const state = new Map(pending ? [['t3.pendingProject', pending]] : []);
+function fixture(t, list, select, folder) {
   const calls = [];
-  const browser = browserUrl ? { url: browserUrl } : undefined;
-  const window = {
-    browserTabs: browser ? [browser] : [], activeBrowserTab: browser,
-    async openBrowserTab(url) { const tab = { url }; window.browserTabs.push(tab); calls.push(['open', url]); return tab; }
-  };
-  const vscode = { window,
-    workspace: { workspaceFolders: [{ uri: { path: '/home/lucas/learning' } }] },
-    commands: { registerCommand() { return { dispose() {} }; } }
-  };
-  const context = { subscriptions: [], globalState: { get: key => state.get(key), update: async (key, value) => state.set(key, value) } };
-  const projects = registerProjects(vscode, context, {
-    enqueue: fn => fn(), showT3: async () => calls.push(['t3']),
-    externalLinks: { ready: async () => ({ sessionId: 'page', client: { send: async (...args) => calls.push(args) } }) }
+  t.mock.method(childProcess, 'execFile', (executable, args, options, callback) => {
+    calls.push({ executable, args });
+    callback(null, JSON.stringify(list));
   });
-  return { projects, calls, state };
+  const handlers = new Map();
+  const vscode = {
+    window: {
+      showQuickPick(items, options) {
+        calls.push({ items, options });
+        return items.find(item => item.label === select);
+      }
+    },
+    workspace: { workspaceFolders: folder && [{ uri: folder }] },
+    commands: {
+      registerCommand(name, handler) { handlers.set(name, handler); },
+      executeCommand(...args) { calls.push(args); }
+    },
+    Uri: { from: fields => fields }
+  };
+  registerProjects(vscode, { subscriptions: [] }, action => action());
+  return { calls, show: handlers.get('lucasCodex.projects') };
 }
 
-test('folder switch restores the same conversation in an existing T3 tab', async () => {
-  const current = 'https://app.t3.codes/env/current-thread';
-  const app = fixture({ root: '/home/lucas/learning', url: current, view: 't3' }, 'https://app.t3.codes/env/old-thread');
-  await app.projects.resume();
-  assert.deepEqual(app.calls, [['Page.navigate', { url: current }, 'page'], ['t3']]);
-  assert.equal(app.state.get('t3.pendingProject'), undefined);
+const projects = [
+  { title: 'Learning', root: '/home/lucas/learning' },
+  { title: 'Cooking', root: '/home/lucas/Cooking' }
+];
+
+test('Codex Projects reads the WSL registry and opens another project in its own window', async t => {
+  const { calls, show } = fixture(t, projects, 'Cooking', {
+    path: '/home/lucas/learning', authority: 'wsl+Ubuntu-24.04'
+  });
+  await show();
+  assert.deepEqual(calls[0], {
+    executable: 'wsl.exe',
+    args: ['--distribution', 'Ubuntu-24.04', '--exec', 'sh', '-c', 'cat "$HOME/.config/codex-projects.json"']
+  });
+  assert.equal(calls[1].options.title, 'Codex Projects');
+  assert.deepEqual(calls[1].items.map(item => item.label), ['Cooking', 'Learning']);
+  assert.deepEqual(calls[2], [
+    'vscode.openFolder',
+    { scheme: 'vscode-remote', authority: 'wsl+Ubuntu-24.04', path: '/home/lucas/Cooking' },
+    { forceNewWindow: true }
+  ]);
 });
 
-test('new project folder always reveals T3 even after switching from files', async () => {
-  const url = 'https://app.t3.codes/env/current-thread';
-  const app = fixture({ root: '/home/lucas/learning', url, view: 'files' });
-  await app.projects.resume();
-  assert.deepEqual(app.calls, [['open', url], ['t3']]);
+test('selecting the current project leaves its window open', async t => {
+  const { calls, show } = fixture(t, projects, 'Learning', {
+    path: '/home/lucas/learning', authority: 'wsl+Ubuntu'
+  });
+  await show();
+  assert.equal(calls.length, 2);
+  assert.equal(calls[1].items.find(item => item.label === 'Learning').detail, 'Carpeta actual');
 });
 
-test('unrelated folders and external URLs cannot trigger automatic navigation', async () => {
-  for (const pending of [
-    { root: '/somewhere/else', url: 'https://app.t3.codes/thread' },
-    { root: '/home/lucas/learning', url: 'https://evil.test' }
-  ]) {
-    const app = fixture(pending);
-    await app.projects.resume();
-    assert.deepEqual(app.calls, []);
-  }
+test('canceling the picker leaves VS Code in the current window', async t => {
+  const { calls, show } = fixture(t, projects);
+  await show();
+  assert.equal(calls.length, 2);
+  assert.equal(calls[0].args[1], 'Ubuntu');
+});
+
+test('a malformed project entry reports the file to fix', async t => {
+  const { calls, show } = fixture(t, [{ title: 'Cooking', root: './Cooking' }], 'Cooking');
+  await assert.rejects(show, /Check ~\/\.config\/codex-projects\.json\./);
+  assert.equal(calls.length, 1);
 });

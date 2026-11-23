@@ -1,64 +1,48 @@
-const { isT3 } = require('./external-links');
+const childProcess = require('node:child_process');
+const { posix } = require('node:path');
 
-function readProjects(vscode, context) {
-  const script = require('node:fs').readFileSync(require('node:path').join(context.extensionPath, 'list-projects.py'), 'utf8');
-  const authority = vscode.workspace.workspaceFolders?.[0]?.uri.authority;
-  const distribution = authority?.toLowerCase().startsWith('wsl+') ? authority.slice(4) : 'Ubuntu';
+const registry = '~/.config/codex-projects.json';
+
+function readProjects(distribution) {
   return new Promise((resolve, reject) => {
-    require('node:child_process').execFile('wsl.exe', ['--distribution', distribution, '--exec', 'python3', '-c', script],
-      { timeout: 10000, windowsHide: true, encoding: 'utf8' }, (error, stdout) => {
-        if (error) return reject(error);
-        try { resolve(JSON.parse(stdout)); } catch (parseError) { reject(parseError); }
-      });
+    childProcess.execFile('wsl.exe', [
+      '--distribution', distribution, '--exec', 'sh', '-c',
+      'cat "$HOME/.config/codex-projects.json"'
+    ], { timeout: 10000, windowsHide: true, encoding: 'utf8' }, (error, stdout) => {
+      if (error) return reject(new Error(`Could not read ${registry} in WSL (${distribution}).`, { cause: error }));
+      try {
+        const projects = JSON.parse(stdout);
+        if (!Array.isArray(projects) || projects.some(project =>
+          typeof project?.title !== 'string' || !project.title.trim() ||
+          typeof project.root !== 'string' || !posix.isAbsolute(project.root)
+        )) {
+          throw new Error('Expected a list of project titles and absolute WSL paths.');
+        }
+        resolve(projects.sort((left, right) => left.title.localeCompare(right.title)));
+      } catch (error) {
+        reject(new Error(`Check ${registry}. ${error.message}`, { cause: error }));
+      }
+    });
   });
 }
 
-function registerProjects(vscode, context, { enqueue, showT3, externalLinks }) {
+function registerProjects(vscode, context, enqueue) {
   const { window, workspace, commands, Uri } = vscode;
-  const currentFolder = () => workspace.workspaceFolders?.[0]?.uri;
-  const currentT3 = () => (isT3(window.activeBrowserTab?.url) ? window.activeBrowserTab : window.browserTabs.find(tab => isT3(tab.url)));
-
-  async function reveal(url) {
-    let browser = currentT3();
-    if (browser && browser.url !== url) {
-      const connection = await externalLinks.ready(browser);
-      await connection.client.send('Page.navigate', { url }, connection.sessionId);
-    } else if (!browser) {
-      browser = await window.openBrowserTab(url);
-    }
-    await externalLinks.ready(browser);
-    await showT3();
-  }
 
   async function show() {
-    const projects = await readProjects(vscode, context);
-    const selected = await window.showQuickPick(projects.map(project => ({
-      label: project.title, description: project.root, project,
-      ...(project.root === currentFolder()?.path ? { detail: 'Carpeta actual' } : {})
-    })), { title: 'Proyectos de T3', placeHolder: 'Elegí un proyecto para abrir su carpeta en WSL', matchOnDescription: true });
-    if (!selected) return;
-    const url = currentT3()?.url || 'https://app.t3.codes';
-    const folder = currentFolder();
-    if (selected.project.root === folder?.path) return reveal(url);
+    const folder = workspace.workspaceFolders?.[0]?.uri;
     const authority = folder?.authority?.toLowerCase().startsWith('wsl+') ? folder.authority : 'wsl+Ubuntu';
-    const uri = Uri.from({ scheme: 'vscode-remote', authority, path: selected.project.root });
-    await context.globalState.update('t3.pendingProject', { root: uri.path, url });
-    try { await commands.executeCommand('vscode.openFolder', uri, { forceReuseWindow: true }); }
-    catch (error) {
-      await context.globalState.update('t3.pendingProject', undefined);
-      throw error;
-    }
+    const projects = await readProjects(authority.slice(4));
+    const selected = await window.showQuickPick(projects.map(({ title, root }) => ({
+      label: title, description: root,
+      ...(root === folder?.path ? { detail: 'Carpeta actual' } : {})
+    })), { title: 'Codex Projects', placeHolder: 'Elegí un proyecto para abrir su carpeta en WSL', matchOnDescription: true });
+    if (!selected || (selected.description === folder?.path && authority === folder.authority)) return;
+    const uri = Uri.from({ scheme: 'vscode-remote', authority, path: selected.description });
+    await commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: true });
   }
 
-  async function resume() {
-    const pending = context.globalState.get('t3.pendingProject');
-    if (!pending) return;
-    await context.globalState.update('t3.pendingProject', undefined);
-    if (pending.root !== currentFolder()?.path || !isT3(pending.url)) return;
-    await reveal(pending.url);
-  }
-
-  context.subscriptions.push(commands.registerCommand('lucasT3.projects', () => enqueue(show)));
-  return { show, resume };
+  context.subscriptions.push(commands.registerCommand('lucasCodex.projects', () => enqueue(show, 'Codex Projects')));
 }
-module.exports = { registerProjects, readProjects };
+
+module.exports = { registerProjects };

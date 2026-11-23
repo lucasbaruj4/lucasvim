@@ -16,13 +16,13 @@ function activate(context) {
   let busy = false;
   let timer;
 
-  function enqueue(action) {
+  function enqueue(action, label = 'T3 switch') {
     const next = pending.then(async () => {
       busy = true;
       try { await action(); }
       finally { busy = false; }
     });
-    pending = next.catch(error => window.showErrorMessage(`T3 switch: ${error.message}`));
+    pending = next.catch(error => window.showErrorMessage(`${label}: ${error.message}`));
     return pending;
   }
 
@@ -138,11 +138,8 @@ function activate(context) {
   context.subscriptions.push(window.tabGroups.onDidChangeTabGroups(changed));
   context.subscriptions.push({ dispose: () => clearTimeout(timer) });
   const externalLinks = registerExternalLinks(vscode, context);
-  const projects = registerProjects(vscode, context, {
-    enqueue, showT3: t3, externalLinks
-  });
-  const ready = enqueue(projects.resume);
-  return { externalLinks, projects, ready };
+  registerProjects(vscode, context, enqueue);
+  return { externalLinks };
 }
 
 module.exports = { activate };

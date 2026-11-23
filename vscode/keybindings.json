@@ -222,7 +222,8 @@
     },
     {
         "key": "shift+c",
-        "command": "lucasT3.toggle"
+        "command": "lucasT3.toggle",
+        "when": "!terminalFocus"
     },
     {
         "key": "ctrl+alt+f12",
@@ -258,12 +259,12 @@
     },
     {
         "key": "ctrl+r",
-        "command": "lucasT3.projects",
+        "command": "lucasCodex.projects",
         "when": "!inQuickOpen"
     },
     {
         "key": "ctrl+alt+f5",
-        "command": "lucasT3.projects",
+        "command": "lucasCodex.projects",
         "when": "!inQuickOpen"
     },
     {

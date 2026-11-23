@@ -1,8 +1,8 @@
 {
   "name": "t3-toggle",
   "displayName": "Lucas T3 Toggle",
-  "description": "Switch between one persistent T3 browser tab and file editors.",
-  "version": "1.1.1",
+  "description": "Browse Codex projects in WSL and switch between T3 and file editors.",
+  "version": "1.1.2",
   "publisher": "lucas",
   "engines": { "vscode": "^1.100.0" },
   "extensionKind": ["ui"],
@@ -18,7 +18,7 @@
       { "command": "lucasT3.explorer", "title": "T3: Toggle Explorer" },
       { "command": "lucasT3.terminal", "title": "T3: Open Terminal" },
       { "command": "lucasT3.closeFile", "title": "T3: Close File or Return to Files" },
-      { "command": "lucasT3.projects", "title": "T3: Open Project Folder" }
+      { "command": "lucasCodex.projects", "title": "Codex Projects" }
     ]
   }
 }

@@ -74,7 +74,7 @@
     {
         "key": "shift+f",
         "command": "workbench.action.quickOpen",
-        "when": "!terminalFocus && !inputFocus || editorTextFocus"
+        "when": "terminalFocus || !inputFocus || editorTextFocus"
     },
     {
         "key": "ctrl+s",

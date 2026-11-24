@@ -24,6 +24,6 @@ manifest = f'''<?xml version="1.0" encoding="utf-8"?>
 with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as archive:
     archive.writestr('extension.vsixmanifest', manifest)
     archive.writestr('[Content_Types].xml', '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="json" ContentType="application/json"/><Default Extension="js" ContentType="application/javascript"/><Default Extension="vsixmanifest" ContentType="text/xml"/></Types>')
-    for name in ('package.json', 'extension.js', 'external-links.js', 'external-link-page.js', 'file-links.js', 'cdp-client.js', 'projects.js', 't3-tab.js'):
+    for name in ('package.json', 'extension.js', 'external-links.js', 'external-link-page.js', 'file-links.js', 'codex-terminal-links.js', 'cdp-client.js', 'projects.js', 't3-tab.js'):
         archive.write(source / name, f'extension/{name}')
 print(output)

@@ -1,6 +1,7 @@
 const vscode = require('vscode');
 const { registerExternalLinks, registerTerminalBrowser } = require('./external-links');
 const { registerFileLinks } = require('./file-links');
+const { trackCodexTerminalLinks } = require('./codex-terminal-links');
 const { registerProjects } = require('./projects');
 const { isT3Tab } = require('./t3-tab');
 
@@ -138,9 +139,10 @@ function activate(context) {
   context.subscriptions.push(window.tabGroups.onDidChangeTabGroups(changed));
   context.subscriptions.push({ dispose: () => clearTimeout(timer) });
   const externalLinks = registerExternalLinks(vscode, context);
-  registerFileLinks(vscode, context);
+  const codexOwnsLinks = trackCodexTerminalLinks(vscode, context);
+  registerFileLinks(vscode, context, codexOwnsLinks);
   registerProjects(vscode, context, enqueue);
-  registerTerminalBrowser(vscode, context);
+  registerTerminalBrowser(vscode, context, { codexOwnsLinks });
   return { externalLinks };
 }
 

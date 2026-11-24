@@ -112,7 +112,7 @@ test('a terminal editor tab routes HTTP and HTTPS links directly to Brave', asyn
         opener = provider;
       }
     }
-  }, { subscriptions: [] }, async url => browserCalls.push(url));
+  }, { subscriptions: [] }, { openExternal: async url => browserCalls.push(url) });
 
   const token = { isCancellationRequested: false };
   const url = 'https://example.com/job?source=terminal&position=7#apply';

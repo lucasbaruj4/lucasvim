@@ -174,7 +174,9 @@ function registerExternalLinks(vscode, context, openExternal = url => openInBrav
   return { ready: ensure };
 }
 
-function registerTerminalBrowser(vscode, context, openExternal = url => openInBrave(vscode, url, true)) {
+function registerTerminalBrowser(vscode, context, {
+  openExternal = url => openInBrave(vscode, url, true), codexOwnsLinks = () => false
+} = {}) {
   const { window, TabInputTerminal, ExternalUriOpenerPriority } = vscode;
   context.subscriptions.push(window.registerExternalUriOpener('lucasT3.terminalBrowser', {
     canOpenExternalUri(_uri, token) {
@@ -185,6 +187,8 @@ function registerTerminalBrowser(vscode, context, openExternal = url => openInBr
     },
     async openExternalUri(uri, _context, token) {
       if (token.isCancellationRequested || !['http', 'https'].includes(uri.scheme)) return;
+      // The terminal also sends this click to Codex, which opens the web link.
+      if (codexOwnsLinks(window.activeTerminal)) return;
       await openExternal(uri.toString(true));
     }
   }, { schemes: ['http', 'https'], label: 'Open terminal links in Brave' }));

@@ -80,13 +80,31 @@ async function openFileLink(vscode, { uri, line, column }) {
   });
 }
 
-function registerFileLinks(vscode, context) {
+function reserveCodexText(text, fileLinks) {
+  const links = [...fileLinks];
+  let end = 0;
+  function reserveThrough(nextStart) {
+    if (text.slice(end, nextStart).trim()) links.push({ startIndex: end, length: nextStart - end });
+  }
+  for (const fileLink of fileLinks) {
+    reserveThrough(fileLink.startIndex);
+    end = Math.max(end, fileLink.startIndex + fileLink.length);
+  }
+  reserveThrough(text.length);
+  return links;
+}
+
+function registerFileLinks(vscode, context, codexOwnsLinks = () => false) {
   const { window } = vscode;
   context.subscriptions.push(window.registerTerminalLinkProvider({
-    provideTerminalLinks(linkContext, token) {
-      return provideFileLinks(vscode, linkContext, token);
+    async provideTerminalLinks(linkContext, token) {
+      const fileLinks = await provideFileLinks(vscode, linkContext, token);
+      if (token.isCancellationRequested || !codexOwnsLinks(linkContext.terminal)) return fileLinks;
+      // Codex receives the mouse event. Claim the remaining text to prevent VS Code's word search.
+      return reserveCodexText(linkContext.line, fileLinks);
     },
     handleTerminalLink(link) {
+      if (!link.uri) return;
       return openFileLink(vscode, link).catch(error => window.showErrorMessage(`Terminal file link: ${error.message}`));
     }
   }));

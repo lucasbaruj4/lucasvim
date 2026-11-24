@@ -2,7 +2,7 @@
   "name": "codex-file-links",
   "displayName": "Lucas Codex File Links",
   "description": "Open WSL terminal file links in VS Code editors.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "lucas",
   "engines": { "vscode": "^1.100.0" },
   "extensionKind": ["workspace"],

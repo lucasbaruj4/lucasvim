@@ -58,7 +58,7 @@ async function provideFileLinks(vscode, { line: text, terminal }, token) {
   return resolved.filter((link, index) => resolved[index + 1]?.startIndex !== link.startIndex);
 }
 
-async function openFileLink(vscode, { uri, line, column }) {
+async function openFileLink(vscode, { uri, line, column }, openingWindows) {
   const { workspace, commands, Range } = vscode;
   if (workspace.getWorkspaceFolder(uri)) {
     const options = { preview: false };
@@ -69,21 +69,30 @@ async function openFileLink(vscode, { uri, line, column }) {
 
   const folder = uri.with({ path: posix.dirname(uri.path) });
   const target = line ? uri.with({ path: `${uri.path}:${line}:${column}` }) : uri;
-  await commands.executeCommand('_files.windowOpen', [{ folderUri: folder }, { fileUri: target }], {
-    forceNewWindow: true,
-    gotoLineMode: Boolean(line)
-  });
+  const key = target.path;
+  if (openingWindows.has(key)) return;
+  openingWindows.add(key);
+  try {
+    await commands.executeCommand('_files.windowOpen', [{ folderUri: folder }, { fileUri: target }], {
+      forceNewWindow: true,
+      gotoLineMode: Boolean(line)
+    });
+  } finally {
+    // VS Code can deliver several activations while the new window takes focus.
+    setTimeout(() => openingWindows.delete(key), 1000).unref();
+  }
 }
 
 function registerFileLinks(vscode, context) {
   const { window } = vscode;
+  const openingWindows = new Set();
   context.subscriptions.push(window.registerTerminalLinkProvider({
     provideTerminalLinks(linkContext, token) {
       return provideFileLinks(vscode, linkContext, token);
     },
     handleTerminalLink(link) {
       if (!link.uri) return;
-      return openFileLink(vscode, link).catch(error => window.showErrorMessage(`Terminal file link: ${error.message}`));
+      return openFileLink(vscode, link, openingWindows).catch(error => window.showErrorMessage(`Terminal file link: ${error.message}`));
     }
   }));
 }

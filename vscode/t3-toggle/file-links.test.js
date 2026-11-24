@@ -4,7 +4,7 @@ const { registerFileLinks } = require('./file-links');
 
 function fixture() {
   const calls = [];
-  const files = new Set(['/work/project/src/a & b (draft).js', '/work/project-other/src/test.js', '/work/project/Makefile']);
+  const files = new Set(['/work/project/src/a & b (draft).js', '/work/project-other/src/test.js', '/work/project/Makefile', '/work/project/test.js']);
   const uri = path => ({ scheme: 'vscode-remote', authority: 'wsl+Ubuntu', path, with: updates => uri(updates.path) });
   let provider;
   const vscode = {
@@ -27,11 +27,12 @@ function fixture() {
   };
   registerFileLinks(vscode, { subscriptions: [] });
   async function detect(line, cwd = '/work/project') {
-    const terminal = { shellIntegration: { cwd: { scheme: 'file', authority: '', path: cwd } }, creationOptions: {} };
+    const shellIntegration = cwd ? { cwd: { scheme: 'file', authority: '', path: cwd } } : undefined;
+    const terminal = { shellIntegration, creationOptions: {} };
     return provider.provideTerminalLinks({ line, terminal }, { isCancellationRequested: false });
   }
-  async function click(line) {
-    const links = await detect(line);
+  async function click(line, cwd) {
+    const links = await detect(line, cwd);
     assert.equal(links.length, 1);
     const [link] = links;
     await provider.handleTerminalLink(link);
@@ -62,4 +63,19 @@ test('ignores URLs, directories, and missing files and resolves relative paths f
   const { detect } = fixture();
   const links = await detect('https://example.com/file.js (missing.js:1) (.) (../Makefile#L8C2)', '/work/project/src');
   assert.deepEqual(links.map(({ uri, line, column }) => [uri.path, line, column]), [['/work/project/Makefile', 8, 2]]);
+});
+
+test('opens a workspace-relative path while the terminal has no working directory', async () => {
+  const { calls, click } = fixture();
+  await click('Guide (Makefile:8:2)', null);
+  assert.equal(calls[0][0], 'vscode.open');
+  assert.equal(calls[0][1].path, '/work/project/Makefile');
+});
+
+test('uses the full path and location when the visible filename is clicked', async () => {
+  const { calls, click } = fixture();
+  const selected = await click('See test.js (/work/project-other/src/test.js:12:3) for details.');
+  assert.ok(selected.startsWith('test.js'));
+  assert.equal(calls[0][0], '_files.windowOpen');
+  assert.equal(calls[0][1][1].fileUri.path, '/work/project-other/src/test.js:12:3');
 });

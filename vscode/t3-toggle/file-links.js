@@ -1,5 +1,7 @@
 const { posix } = require('node:path');
 
+const locationSuffix = /:(\d+)(?::(\d+))?(?:-\d+(?::\d+)?)?$|#L(\d+)(?:C(\d+))?(?:-L\d+(?:C\d+)?)?$/;
+
 function sourceNumber(value) {
   const number = Number(value);
   return Number.isSafeInteger(number) && number > 0 ? number : undefined;
@@ -10,7 +12,8 @@ function isWsl(uri) {
 }
 
 async function provideFileLinks(vscode, { line: text, terminal }, token) {
-  const folder = vscode.workspace.workspaceFolders?.find(({ uri }) => isWsl(uri))?.uri;
+  const folders = (vscode.workspace.workspaceFolders ?? []).filter(({ uri }) => isWsl(uri));
+  const folder = folders[0]?.uri;
   const shellCwd = terminal.shellIntegration?.cwd;
   let cwd = [shellCwd, terminal.creationOptions.cwd].find(isWsl);
   // The Windows extension host receives the WSL shell's working directory as a file URI.
@@ -23,13 +26,13 @@ async function provideFileLinks(vscode, { line: text, terminal }, token) {
 
   // Codex's inline transcript prints a path directly or after its label in parentheses.
   const candidates = [...text.matchAll(/\(((?:[^()\n]|\([^()\n]*\))+)\)|[^\s()[\]<>`"',;]+/gu)];
-  const links = await Promise.all(candidates.map(async match => {
+  const links = await Promise.all(candidates.map(async (match, index) => {
     const target = match[1] ?? match[0];
-    const location = target.match(/:(\d+)(?::(\d+))?(?:-\d+(?::\d+)?)?$|#L(\d+)(?:C(\d+))?(?:-L\d+(?:C\d+)?)?$/);
+    const location = target.match(locationSuffix);
     const file = location ? target.slice(0, location.index) : target;
     if (!file || (!/[/.]/.test(file) && !location && !match[1])) return;
     if (/^(?:[\w+.-]+:|\/\/|~)/.test(file) || /[\u0000-\u001f\u007f]/.test(file)) return;
-    if (!posix.isAbsolute(file) && !cwd) return;
+    if (!posix.isAbsolute(file) && !cwd && folders.length !== 1) return;
 
     const uri = base.with({ path: posix.resolve(base.path, file), query: '', fragment: '' });
     try {
@@ -38,16 +41,26 @@ async function provideFileLinks(vscode, { line: text, terminal }, token) {
     } catch {
       return;
     }
+    const label = candidates[index - 1];
+    const hasFilenameLabel = match[1] && label && !label[1] &&
+      /^\s+$/.test(text.slice(label.index + label[0].length, match.index)) &&
+      !/^[\w+.-]+:\//.test(label[0]) &&
+      posix.basename(label[0].replace(locationSuffix, '')) === posix.basename(file);
+    const targetStart = match.index + (match[1] ? 1 : 0);
+    const startIndex = hasFilenameLabel ? label.index : targetStart;
     return {
-      startIndex: match.index + (match[1] ? 1 : 0),
-      length: target.length,
+      startIndex,
+      length: targetStart + target.length - startIndex,
       tooltip: 'Open in VS Code',
       uri,
       line: sourceNumber(location?.[1] ?? location?.[3]),
       column: sourceNumber(location?.[2] ?? location?.[4]) ?? 1
     };
   }));
-  return token.isCancellationRequested ? [] : links.filter(Boolean);
+  if (token.isCancellationRequested) return [];
+  const resolved = links.filter(Boolean);
+  // If the label resolves on its own, prefer the explicit destination that follows it.
+  return resolved.filter((link, index) => resolved[index + 1]?.startIndex !== link.startIndex);
 }
 
 async function openFileLink(vscode, { uri, line, column }) {

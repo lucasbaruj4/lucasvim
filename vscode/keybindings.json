@@ -1,6 +1,12 @@
 // Place your key bindings in this file to override the defaults
 [
     {
+        "key": "ctrl+alt+v",
+        "command": "workbench.action.terminal.sendSequence",
+        "when": "terminalFocus",
+        "args": { "text": "\u0016" }
+    },
+    {
         "key": "ctrl+f4",
         "command": "-workbench.action.closeActiveEditor"
     },

@@ -5,7 +5,7 @@ const { registerFileLinks } = require('./file-links');
 function fixture() {
   const calls = [];
   const files = new Set(['/work/project/src/a & b (draft).js', '/work/project-other/src/test.js', '/work/project/Makefile', '/work/project/test.js']);
-  const uri = path => ({ scheme: 'vscode-remote', authority: 'wsl+Ubuntu', path, with: updates => uri(updates.path) });
+  const uri = path => ({ scheme: 'file', authority: '', path, with: updates => uri(updates.path) });
   let provider;
   const vscode = {
     FileType: { File: 1 },
@@ -27,7 +27,7 @@ function fixture() {
   };
   registerFileLinks(vscode, { subscriptions: [] });
   async function detect(line, cwd = '/work/project') {
-    const shellIntegration = cwd ? { cwd: { scheme: 'file', authority: '', path: cwd } } : undefined;
+    const shellIntegration = cwd ? { cwd: uri(cwd) } : undefined;
     const terminal = { shellIntegration, creationOptions: {} };
     return provider.provideTerminalLinks({ line, terminal }, { isCancellationRequested: false });
   }

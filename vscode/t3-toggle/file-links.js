@@ -7,20 +7,15 @@ function sourceNumber(value) {
   return Number.isSafeInteger(number) && number > 0 ? number : undefined;
 }
 
-function isWsl(uri) {
-  return uri?.scheme === 'vscode-remote' && uri.authority.toLowerCase().startsWith('wsl+');
+function isLocalPath(uri) {
+  return uri?.scheme === 'file' && !uri.authority && uri.path.startsWith('/') && !/^\/[a-z]:/i.test(uri.path);
 }
 
 async function provideFileLinks(vscode, { line: text, terminal }, token) {
-  const folders = (vscode.workspace.workspaceFolders ?? []).filter(({ uri }) => isWsl(uri));
+  const folders = (vscode.workspace.workspaceFolders ?? []).filter(({ uri }) => isLocalPath(uri));
   const folder = folders[0]?.uri;
   const shellCwd = terminal.shellIntegration?.cwd;
-  let cwd = [shellCwd, terminal.creationOptions.cwd].find(isWsl);
-  // The Windows extension host receives the WSL shell's working directory as a file URI.
-  if (!cwd && folder && shellCwd?.scheme === 'file' && !shellCwd.authority &&
-      shellCwd.path.startsWith('/') && !/^\/[a-z]:/i.test(shellCwd.path)) {
-    cwd = folder.with({ path: shellCwd.path });
-  }
+  const cwd = [shellCwd, terminal.creationOptions.cwd].find(isLocalPath);
   const base = cwd ?? folder;
   if (!base || token.isCancellationRequested) return [];
 
@@ -80,28 +75,11 @@ async function openFileLink(vscode, { uri, line, column }) {
   });
 }
 
-function reserveCodexText(text, fileLinks) {
-  const links = [...fileLinks];
-  let end = 0;
-  function reserveThrough(nextStart) {
-    if (text.slice(end, nextStart).trim()) links.push({ startIndex: end, length: nextStart - end });
-  }
-  for (const fileLink of fileLinks) {
-    reserveThrough(fileLink.startIndex);
-    end = Math.max(end, fileLink.startIndex + fileLink.length);
-  }
-  reserveThrough(text.length);
-  return links;
-}
-
-function registerFileLinks(vscode, context, codexOwnsLinks = () => false) {
+function registerFileLinks(vscode, context) {
   const { window } = vscode;
   context.subscriptions.push(window.registerTerminalLinkProvider({
-    async provideTerminalLinks(linkContext, token) {
-      const fileLinks = await provideFileLinks(vscode, linkContext, token);
-      if (token.isCancellationRequested || !codexOwnsLinks(linkContext.terminal)) return fileLinks;
-      // Codex receives the mouse event. Claim the remaining text to prevent VS Code's word search.
-      return reserveCodexText(linkContext.line, fileLinks);
+    provideTerminalLinks(linkContext, token) {
+      return provideFileLinks(vscode, linkContext, token);
     },
     handleTerminalLink(link) {
       if (!link.uri) return;
@@ -110,4 +88,9 @@ function registerFileLinks(vscode, context, codexOwnsLinks = () => false) {
   }));
 }
 
-module.exports = { registerFileLinks };
+function activate(context) {
+  const vscode = require('vscode');
+  if (vscode.env.remoteName === 'wsl') registerFileLinks(vscode, context);
+}
+
+module.exports = { activate, registerFileLinks };

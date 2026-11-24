@@ -1,8 +1,10 @@
 {
     "chat.disableAIFeatures": true,
     "terminal.integrated.defaultLocation": "editor",
+    "terminal.integrated.showLinkHover": false,
     "terminal.integrated.defaultProfile.windows": "Ubuntu (WSL)",
     "workbench.startupEditor": "none",
+    "workbench.browser.openLocalhostLinks": false,
     "workbench.browser.newTabPlacement": "activeGroup",
     "workbench.statusBar.visible": false,
     "editor.wordWrap": "on",

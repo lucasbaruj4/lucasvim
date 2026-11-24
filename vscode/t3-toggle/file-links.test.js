@@ -38,7 +38,7 @@ function fixture() {
     await provider.handleTerminalLink(link);
     return line.slice(link.startIndex, link.startIndex + link.length);
   }
-  return { calls, click, detect };
+  return { calls, click, detect, activateLink: link => provider.handleTerminalLink(link) };
 }
 
 test('opens a file in the current workspace at the requested line and column', async () => {
@@ -57,6 +57,13 @@ test('opens the parent folder and file together in a new window', async () => {
   assert.equal(folder.folderUri.path, '/work/project-other/src');
   assert.equal(file.fileUri.path, '/work/project-other/src/test.js:12:3');
   assert.deepEqual(options, { forceNewWindow: true, gotoLineMode: true });
+});
+
+test('opens one window when the terminal activates the same link twice', async () => {
+  const { calls, detect, activateLink } = fixture();
+  const [link] = await detect('/work/project-other/src/test.js:12:3');
+  await Promise.all([activateLink(link), activateLink(link)]);
+  assert.equal(calls.length, 1);
 });
 
 test('ignores URLs, directories, and missing files and resolves relative paths from the terminal', async () => {

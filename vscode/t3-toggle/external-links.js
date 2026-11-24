@@ -89,4 +89,20 @@ function registerExternalLinks(vscode, context, openExternal = url => openInBrav
   return { ready: ensure };
 }
 
-module.exports = { registerExternalLinks, attachT3Links, isT3 };
+function registerTerminalBrowser(vscode, context, openExternal = url => openInBrave(vscode, url)) {
+  const { window, TabInputTerminal, ExternalUriOpenerPriority } = vscode;
+  context.subscriptions.push(window.registerExternalUriOpener('lucasT3.terminalBrowser', {
+    canOpenExternalUri(_uri, token) {
+      const tab = window.tabGroups.activeTabGroup.activeTab;
+      return !token.isCancellationRequested && tab?.input instanceof TabInputTerminal
+        ? ExternalUriOpenerPriority.Preferred
+        : ExternalUriOpenerPriority.None;
+    },
+    async openExternalUri(uri, _context, token) {
+      if (token.isCancellationRequested || !['http', 'https'].includes(uri.scheme)) return;
+      await openExternal(uri.toString(true));
+    }
+  }, { schemes: ['http', 'https'], label: 'Open terminal links in Brave' }));
+}
+
+module.exports = { registerExternalLinks, registerTerminalBrowser, attachT3Links, isT3 };

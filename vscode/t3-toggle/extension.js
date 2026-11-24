@@ -97,7 +97,6 @@ function activate(context) {
       await run('workbench.action.terminal.new');
       mode = 'files';
       lastFile = key(active());
-      await run('workbench.view.explorer');
       await run('workbench.action.focusWindow');
       await run('workbench.action.focusActiveEditorGroup');
     },

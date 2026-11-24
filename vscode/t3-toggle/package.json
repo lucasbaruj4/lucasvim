@@ -2,7 +2,7 @@
   "name": "t3-toggle",
   "displayName": "Lucas T3 Toggle",
   "description": "Browse Codex projects in WSL and switch between T3 and file editors.",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "publisher": "lucas",
   "engines": { "vscode": "^1.100.0" },
   "extensionKind": ["ui"],

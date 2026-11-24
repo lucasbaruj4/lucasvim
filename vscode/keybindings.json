@@ -73,43 +73,8 @@
     },
     {
         "key": "shift+f",
-        "command": "notebook.formatCell",
-        "when": "editorHasDocumentFormattingProvider && editorTextFocus && inCompositeEditor && notebookEditable && !editorReadonly && activeEditor == 'workbench.editor.notebook'"
-    },
-    {
-        "key": "shift+alt+f",
-        "command": "-notebook.formatCell",
-        "when": "editorHasDocumentFormattingProvider && editorTextFocus && inCompositeEditor && notebookEditable && !editorReadonly && activeEditor == 'workbench.editor.notebook'"
-    },
-    {
-        "key": "shift+f",
-        "command": "editor.action.formatDocument",
-        "when": "editorHasDocumentFormattingProvider && editorTextFocus && !editorReadonly && !inCompositeEditor"
-    },
-    {
-        "key": "shift+alt+f",
-        "command": "-editor.action.formatDocument",
-        "when": "editorHasDocumentFormattingProvider && editorTextFocus && !editorReadonly && !inCompositeEditor"
-    },
-    {
-        "key": "shift+f",
-        "command": "editor.action.formatDocument.none",
-        "when": "editorTextFocus && !editorHasDocumentFormattingProvider && !editorReadonly"
-    },
-    {
-        "key": "shift+alt+f",
-        "command": "-editor.action.formatDocument.none",
-        "when": "editorTextFocus && !editorHasDocumentFormattingProvider && !editorReadonly"
-    },
-    {
-        "key": "shift+f",
-        "command": "notebook.format",
-        "when": "notebookEditable && !editorTextFocus && activeEditor == 'workbench.editor.notebook'"
-    },
-    {
-        "key": "shift+alt+f",
-        "command": "-notebook.format",
-        "when": "notebookEditable && !editorTextFocus && activeEditor == 'workbench.editor.notebook'"
+        "command": "workbench.action.quickOpen",
+        "when": "!terminalFocus && !inputFocus || editorTextFocus"
     },
     {
         "key": "ctrl+s",

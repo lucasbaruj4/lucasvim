@@ -2,7 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const { installPageLinks } = require('./external-link-page');
-const { attachT3Links, isT3 } = require('./external-links');
+const { attachT3Links, isT3, registerTerminalBrowser } = require('./external-links');
 
 function fixture() {
   const handlers = new Map();
@@ -94,4 +94,33 @@ test('native CDP binding handles external URLs without closing or opening browse
   assert.deepEqual(sent, ['https://example.com/']);
   assert.equal(calls.some(call => /closeTarget|createTarget|navigate/i.test(call.method)), false);
   await connection.dispose();
+});
+
+test('a terminal editor tab routes HTTP and HTTPS links directly to Brave', async () => {
+  class TabInputTerminal {}
+  const group = { activeTab: { input: new TabInputTerminal() } };
+  const priority = { None: 0, Preferred: 3 };
+  const browserCalls = [];
+  let opener;
+  registerTerminalBrowser({
+    TabInputTerminal,
+    ExternalUriOpenerPriority: priority,
+    window: {
+      tabGroups: { activeTabGroup: group },
+      registerExternalUriOpener(_id, provider, { schemes }) {
+        assert.deepEqual(schemes, ['http', 'https']);
+        opener = provider;
+      }
+    }
+  }, { subscriptions: [] }, async url => browserCalls.push(url));
+
+  const token = { isCancellationRequested: false };
+  const url = 'https://example.com/job?source=terminal&position=7#apply';
+  const uri = { scheme: 'https', toString: () => url };
+  assert.equal(opener.canOpenExternalUri(uri, token), priority.Preferred);
+  await opener.openExternalUri(uri, {}, token);
+  await opener.openExternalUri({ scheme: 'file' }, {}, token);
+  group.activeTab = { input: {} };
+  assert.equal(opener.canOpenExternalUri(uri, token), priority.None);
+  assert.deepEqual(browserCalls, [url]);
 });

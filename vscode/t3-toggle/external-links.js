@@ -32,11 +32,54 @@ function openFromWindowsDesktop(browser, url) {
   // The desktop shell can pass foreground activation to an already running Brave.
   const command = `
 $ErrorActionPreference = 'Stop'
+Add-Type @'
+using System;
+using System.Runtime.InteropServices;
+
+public static class TerminalBrowserFocus {
+  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr window, out int processId);
+  [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr window);
+  [DllImport("user32.dll")] static extern bool IsIconic(IntPtr window);
+  [DllImport("user32.dll")] static extern bool ShowWindowAsync(IntPtr window, int command);
+  [DllImport("user32.dll")] static extern short GetAsyncKeyState(int key);
+  [DllImport("user32.dll")] static extern void keybd_event(byte key, byte scan, uint flags, IntPtr extra);
+
+  public static void Activate(IntPtr browser, IntPtr editor) {
+    if (GetForegroundWindow() != editor) return;
+    if (IsIconic(browser)) ShowWindowAsync(browser, 9); // SW_RESTORE
+    if (SetForegroundWindow(browser) || GetForegroundWindow() != editor) return;
+    const byte alt = 0x12;
+    if (GetAsyncKeyState(alt) < 0) return;
+    // Windows unlocks foreground activation on Alt. Pair both events here.
+    keybd_event(alt, 0, 0, IntPtr.Zero);
+    try { SetForegroundWindow(browser); }
+    finally { keybd_event(alt, 0, 2, IntPtr.Zero); }
+  }
+}
+'@
+$editor = [TerminalBrowserFocus]::GetForegroundWindow()
+$editorProcessId = 0
+[TerminalBrowserFocus]::GetWindowThreadProcessId($editor, [ref]$editorProcessId) | Out-Null
+$foregroundProcess = Get-Process -Id $editorProcessId -ErrorAction SilentlyContinue
 $shell = New-Object -ComObject Shell.Application
 $windowHandle = 0
 $desktop = $shell.Windows().FindWindowSW(0, 0, 8, [ref]$windowHandle, 1)
 if (!$desktop) { exit 1 }
 $desktop.Document.Application.ShellExecute($env:LUCAS_LINK_BROWSER, $env:LUCAS_LINK_ARGUMENT, '', 'open', 1)
+if ($foregroundProcess.Path -ne $env:LUCAS_LINK_EDITOR) { exit 0 }
+
+# Give Brave time to handle the URL and activate its own window.
+Start-Sleep -Milliseconds 250
+if ([TerminalBrowserFocus]::GetForegroundWindow() -ne $editor) { exit 0 }
+try {
+  $brave = Get-Process brave -ErrorAction SilentlyContinue |
+    Where-Object { $_.Path -eq $env:LUCAS_LINK_BROWSER -and $_.MainWindowHandle } |
+    Select-Object -First 1
+  if ($brave) { [TerminalBrowserFocus]::Activate($brave.MainWindowHandle, $editor) }
+} catch {
+  # The URL has already been handed to Brave. Do not launch it again.
+}
 `;
   const powershell = path.join(process.env.SystemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
   // ShellExecute accepts one command line, so quote the URL as a single Windows argument.
@@ -44,7 +87,7 @@ $desktop.Document.Application.ShellExecute($env:LUCAS_LINK_BROWSER, $env:LUCAS_L
 
   return new Promise((resolve, reject) => {
     const child = childProcess.spawn(powershell, ['-NoProfile', '-NonInteractive', '-STA', '-Command', command], {
-      env: { ...process.env, LUCAS_LINK_BROWSER: browser, LUCAS_LINK_ARGUMENT: argument },
+      env: { ...process.env, LUCAS_LINK_BROWSER: browser, LUCAS_LINK_ARGUMENT: argument, LUCAS_LINK_EDITOR: process.execPath },
       windowsHide: true,
       stdio: 'ignore'
     });

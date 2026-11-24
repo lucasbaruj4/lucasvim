@@ -17,8 +17,7 @@ async function openInBrave(vscode, url, focus = false) {
     throw new Error('Set workbench.externalBrowser to the full path of brave.exe in your user settings.');
   }
   if (focus && process.platform === 'win32' && process.env.SystemRoot) {
-    const opened = await openFromWindowsDesktop(browser, url).catch(() => false);
-    if (opened) return true;
+    return openWithWindowsFocus(browser, url);
   }
 
   return new Promise((resolve, reject) => {
@@ -28,8 +27,7 @@ async function openInBrave(vscode, url, focus = false) {
   });
 }
 
-function openFromWindowsDesktop(browser, url) {
-  // The desktop shell can pass foreground activation to an already running Brave.
+function openWithWindowsFocus(browser, url) {
   const command = `
 $ErrorActionPreference = 'Stop'
 Add-Type @'
@@ -62,24 +60,34 @@ $editor = [TerminalBrowserFocus]::GetForegroundWindow()
 $editorProcessId = 0
 [TerminalBrowserFocus]::GetWindowThreadProcessId($editor, [ref]$editorProcessId) | Out-Null
 $foregroundProcess = Get-Process -Id $editorProcessId -ErrorAction SilentlyContinue
-$shell = New-Object -ComObject Shell.Application
-$windowHandle = 0
-$desktop = $shell.Windows().FindWindowSW(0, 0, 8, [ref]$windowHandle, 1)
-if (!$desktop) { exit 1 }
-$desktop.Document.Application.ShellExecute($env:LUCAS_LINK_BROWSER, $env:LUCAS_LINK_ARGUMENT, '', 'open', 1)
-if ($foregroundProcess.Path -ne $env:LUCAS_LINK_EDITOR) { exit 0 }
+$desktopApplication = $null
+try {
+  $shell = New-Object -ComObject Shell.Application
+  $windowHandle = 0
+  $desktop = $shell.Windows().FindWindowSW(0, 0, 8, [ref]$windowHandle, 1)
+  if ($desktop) { $desktopApplication = $desktop.Document.Application }
+} catch {}
+
+# Choose a launcher before handing off the URL. Launching again can open a second tab.
+if ($desktopApplication) {
+  $desktopApplication.ShellExecute($env:LUCAS_LINK_BROWSER, $env:LUCAS_LINK_ARGUMENT, '', 'open', 1)
+} else {
+  Start-Process -FilePath $env:LUCAS_LINK_BROWSER -ArgumentList $env:LUCAS_LINK_ARGUMENT
+}
 
 # Give Brave time to handle the URL and activate its own window.
-Start-Sleep -Milliseconds 250
-if ([TerminalBrowserFocus]::GetForegroundWindow() -ne $editor) { exit 0 }
 try {
+  if ($foregroundProcess.Path -ne $env:LUCAS_LINK_EDITOR) { exit 0 }
+  Start-Sleep -Milliseconds 250
+  if ([TerminalBrowserFocus]::GetForegroundWindow() -ne $editor) { exit 0 }
   $brave = Get-Process brave -ErrorAction SilentlyContinue |
     Where-Object { $_.Path -eq $env:LUCAS_LINK_BROWSER -and $_.MainWindowHandle } |
     Select-Object -First 1
   if ($brave) { [TerminalBrowserFocus]::Activate($brave.MainWindowHandle, $editor) }
 } catch {
-  # The URL has already been handed to Brave. Do not launch it again.
+  # Windows already received the URL. Foreground activation is best effort.
 }
+exit 0
 `;
   const powershell = path.join(process.env.SystemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
   // ShellExecute accepts one command line, so quote the URL as a single Windows argument.
@@ -92,7 +100,10 @@ try {
       stdio: 'ignore'
     });
     child.once('error', reject);
-    child.once('exit', code => resolve(code === 0));
+    child.once('exit', code => {
+      if (code === 0) resolve(true);
+      else reject(new Error('The Windows Brave opener did not finish successfully.'));
+    });
   });
 }
 

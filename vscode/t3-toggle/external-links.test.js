@@ -101,23 +101,31 @@ test('a terminal editor tab routes HTTP and HTTPS links directly to Brave', asyn
   const group = { activeTab: { input: new TabInputTerminal() } };
   const priority = { None: 0, Preferred: 3 };
   const browserCalls = [];
+  const terminal = {};
+  let codexOwnsLinks = false;
   let opener;
   registerTerminalBrowser({
     TabInputTerminal,
     ExternalUriOpenerPriority: priority,
     window: {
+      activeTerminal: terminal,
       tabGroups: { activeTabGroup: group },
       registerExternalUriOpener(_id, provider, { schemes }) {
         assert.deepEqual(schemes, ['http', 'https']);
         opener = provider;
       }
     }
-  }, { subscriptions: [] }, { openExternal: async url => browserCalls.push(url) });
+  }, { subscriptions: [] }, {
+    openExternal: async url => browserCalls.push(url),
+    codexOwnsLinks: active => active === terminal && codexOwnsLinks
+  });
 
   const token = { isCancellationRequested: false };
   const url = 'https://example.com/job?source=terminal&position=7#apply';
   const uri = { scheme: 'https', toString: () => url };
   assert.equal(opener.canOpenExternalUri(uri, token), priority.Preferred);
+  await opener.openExternalUri(uri, {}, token);
+  codexOwnsLinks = true;
   await opener.openExternalUri(uri, {}, token);
   await opener.openExternalUri({ scheme: 'file' }, {}, token);
   group.activeTab = { input: {} };

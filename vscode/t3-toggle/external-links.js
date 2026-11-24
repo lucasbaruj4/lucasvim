@@ -1,3 +1,5 @@
+const path = require('node:path');
+const childProcess = require('node:child_process');
 const { createCdpClient } = require('./cdp-client');
 const { installPageLinks } = require('./external-link-page');
 const ORIGIN = 'https://app.t3.codes';
@@ -9,16 +11,45 @@ function isT3(url) {
   catch { return false; }
 }
 
-function openInBrave(vscode, url) {
+async function openInBrave(vscode, url, focus = false) {
   const browser = vscode.workspace.getConfiguration('workbench').inspect('externalBrowser')?.globalValue;
-  const path = require('node:path');
   if (typeof browser !== 'string' || !path.isAbsolute(browser) || !/^brave\.exe$/i.test(path.basename(browser))) {
-    return Promise.reject(new Error('Set workbench.externalBrowser to the full path of brave.exe in your user settings.'));
+    throw new Error('Set workbench.externalBrowser to the full path of brave.exe in your user settings.');
   }
+  if (focus && process.platform === 'win32' && process.env.SystemRoot) {
+    const opened = await openFromWindowsDesktop(browser, url).catch(() => false);
+    if (opened) return true;
+  }
+
   return new Promise((resolve, reject) => {
-    const child = require('node:child_process').spawn(browser, [url], { detached: true, stdio: 'ignore' });
+    const child = childProcess.spawn(browser, [url], { detached: true, stdio: 'ignore' });
     child.once('error', reject);
     child.once('spawn', () => { child.unref(); resolve(true); });
+  });
+}
+
+function openFromWindowsDesktop(browser, url) {
+  // The desktop shell can pass foreground activation to an already running Brave.
+  const command = `
+$ErrorActionPreference = 'Stop'
+$shell = New-Object -ComObject Shell.Application
+$windowHandle = 0
+$desktop = $shell.Windows().FindWindowSW(0, 0, 8, [ref]$windowHandle, 1)
+if (!$desktop) { exit 1 }
+$desktop.Document.Application.ShellExecute($env:LUCAS_LINK_BROWSER, $env:LUCAS_LINK_ARGUMENT, '', 'open', 1)
+`;
+  const powershell = path.join(process.env.SystemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+  // ShellExecute accepts one command line, so quote the URL as a single Windows argument.
+  const argument = `"${url.replace(/(\\*)"/g, '$1$1\\"').replace(/\\+$/, '$&$&')}"`;
+
+  return new Promise((resolve, reject) => {
+    const child = childProcess.spawn(powershell, ['-NoProfile', '-NonInteractive', '-STA', '-Command', command], {
+      env: { ...process.env, LUCAS_LINK_BROWSER: browser, LUCAS_LINK_ARGUMENT: argument },
+      windowsHide: true,
+      stdio: 'ignore'
+    });
+    child.once('error', reject);
+    child.once('exit', code => resolve(code === 0));
   });
 }
 
@@ -89,7 +120,7 @@ function registerExternalLinks(vscode, context, openExternal = url => openInBrav
   return { ready: ensure };
 }
 
-function registerTerminalBrowser(vscode, context, openExternal = url => openInBrave(vscode, url)) {
+function registerTerminalBrowser(vscode, context, openExternal = url => openInBrave(vscode, url, true)) {
   const { window, TabInputTerminal, ExternalUriOpenerPriority } = vscode;
   context.subscriptions.push(window.registerExternalUriOpener('lucasT3.terminalBrowser', {
     canOpenExternalUri(_uri, token) {

@@ -81,7 +81,7 @@ try {
   Start-Sleep -Milliseconds 250
   if ([TerminalBrowserFocus]::GetForegroundWindow() -ne $editor) { exit 0 }
   $brave = Get-Process brave -ErrorAction SilentlyContinue |
-    Where-Object { $_.Path -eq $env:LUCAS_LINK_BROWSER -and $_.MainWindowHandle } |
+    Where-Object { $_.Path -eq $env:LUCAS_LINK_BROWSER -and $_.MainWindowHandle -ne [IntPtr]::Zero } |
     Select-Object -First 1
   if ($brave) { [TerminalBrowserFocus]::Activate($brave.MainWindowHandle, $editor) }
 } catch {
